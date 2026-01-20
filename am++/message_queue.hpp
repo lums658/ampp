@@ -30,10 +30,10 @@
 #include <am++/detail/thread_support.hpp>
 #include <boost/config.hpp>
 #include <boost/bind.hpp>
-#include <boost/optional.hpp>
-#include <boost/function.hpp>
+#include <optional>
+#include <functional>
 #include <boost/noncopyable.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <boost/utility/result_of.hpp>
 #include <boost/intrusive/slist.hpp>
 #include <list>
@@ -310,7 +310,7 @@ class message_queue: boost::noncopyable {
   void receive(K k) {
     assert (!receive_all_active);
     // fprintf(stderr, "%p getting receive in %p\n", this, (void*)pthread_self());
-    boost::optional<Val> msg;
+    std::optional<Val> msg;
     {
       std::lock_guard<amplusplus::detail::mutex> l(lock);
       if (!messages.empty()) {
@@ -326,7 +326,7 @@ class message_queue: boost::noncopyable {
       }
     }
     outside_lock:
-    AMPLUSPLUS_MOVE(k)(msg.get());
+    AMPLUSPLUS_MOVE(k)(*msg);
   }
 
   template <typename K>

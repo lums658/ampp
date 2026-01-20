@@ -27,7 +27,6 @@
 #define AMPLUSPLUS_DETAIL_MPI_POOL_HPP
 
 #include <boost/pool/pool.hpp>
-#include <boost/smart_ptr.hpp>
 #include <boost/thread.hpp>
 #include <mpi.h>
 #include <memory>

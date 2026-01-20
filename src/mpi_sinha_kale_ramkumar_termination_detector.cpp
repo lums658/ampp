@@ -28,10 +28,9 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/ref.hpp>
-#include <boost/assert.hpp>
 #include <nbc.h>
 #include <stdio.h>
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/type_traits.hpp>
 #include <boost/static_assert.hpp>
 #include <cassert>

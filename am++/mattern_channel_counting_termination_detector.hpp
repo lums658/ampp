@@ -27,7 +27,7 @@
 #define AMPLUSPLUS_MATTERN_CHANNEL_COUNTING_TERMINATION_DETECTOR_HPP
 
 #include <am++/tdetect.hpp>
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/thread.hpp>
 #include <mpi.h>
 

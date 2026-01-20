@@ -39,8 +39,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ref.hpp>
 #include <boost/bind.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/assert.hpp>
+#include <memory>
+#include <cassert>
 
 namespace amplusplus {
 

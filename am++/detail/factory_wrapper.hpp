@@ -28,8 +28,7 @@
 
 #include <boost/preprocessor.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
-#include <boost/type_traits/is_base_and_derived.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <type_traits>
 
 #define AMPLUSPLUS_MAKE_WRAPPER(type, tparam_seq) \
 AMPLUSPLUS_ADD_WRAP_IF_NONZERO(BOOST_PP_SEQ_SIZE(tparam_seq))(template <, >, BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(AMPLUSPLUS_PREPEND_TYPENAME, no_data, tparam_seq))) \
@@ -58,7 +57,7 @@ class type { \
   underlying_type underlying; \
  \
   type_(): underlying() {} \
-  template <typename A0> type_(const A0& a0, typename boost::disable_if<boost::is_base_and_derived<amplusplus::detail::typed_in_place_factory_owning_base, A0>, void*>::type = 0): underlying(a0) {} \
+  template <typename A0> type_(const A0& a0, typename std::enable_if<!std::is_base_of<amplusplus::detail::typed_in_place_factory_owning_base, A0>::value, void*>::type = 0): underlying(a0) {} \
   BOOST_PP_REPEAT_FROM_TO(2, 11, AMPLUSPLUS_ONE_FORWARDING_CONSTRUCTOR, type_) \
   type_(const amplusplus::detail::typed_in_place_factory_owning0<underlying_type>&): underlying() {} \
   template <typename A0> type_(const amplusplus::detail::typed_in_place_factory_owning1<underlying_type, A0>& f): underlying(f.a0) {} \

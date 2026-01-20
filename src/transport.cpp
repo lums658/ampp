@@ -26,17 +26,10 @@
 #include <config.h>
 
 #include <am++/transport.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/assert.hpp>
-#include <boost/foreach.hpp>
-#include <boost/move/move.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/bellman_ford_shortest_paths.hpp>
-#include <boost/graph/iteration_macros.hpp>
-#include <boost/graph/property_maps/null_property_map.hpp>
 #include <algorithm>
 #include <set>
 #include <map>
+#include <cassert>
 
 namespace amplusplus {
 

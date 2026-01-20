@@ -30,9 +30,9 @@
 #include <am++/traits.hpp>
 #include <utility>
 #include <vector>
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/thread.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <stdint.h>
 #include <am++/scoped_raw_handler.hpp>
 

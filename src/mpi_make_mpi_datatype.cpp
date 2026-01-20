@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
-#include <boost/smart_ptr.hpp>
+#include <memory>
 
 namespace amplusplus {
   detail::type_info_map<std::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;

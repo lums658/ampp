@@ -28,12 +28,11 @@
 #define AMPLUSPLUS_SIZE_COALESCED_MESSAGE_TYPE_HPP
 
 #include <am++/traits.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <utility>
 #include <vector>
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/thread.hpp>
-#include <boost/foreach.hpp>
 #include <boost/noncopyable.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>

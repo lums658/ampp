@@ -34,9 +34,9 @@
 #include <boost/intrusive/detail/get_value_traits.hpp>
 #include <boost/intrusive/detail/math.hpp>
 #include <boost/shared_container_iterator.hpp>
-#include <boost/format.hpp>
-#include <boost/assert.hpp>
 #include <iostream>
+#include <sstream>
+#include <cassert>
 #include <utility>
 #include <stdio.h>
 
@@ -460,7 +460,7 @@ struct rook_routing {
     side1 = factor;
     side2 = sz / factor;
     if (side2 > 3 * side1 && my_rank == 0) {
-      std::clog << (boost::format("rook_routing: rectangle sides %d and %d are unbalanced\n") % side1 % side2).str() << std::flush;
+      std::clog << "rook_routing: rectangle sides " << side1 << " and " << side2 << " are unbalanced\n" << std::flush;
     }
   }
   transport::rank_type next_hop(transport::rank_type i) const {

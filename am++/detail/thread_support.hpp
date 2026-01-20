@@ -30,7 +30,7 @@
 #include <boost/thread/tss.hpp>
 #include <boost/mpl/assert.hpp>
 #include <boost/mpl/bool.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 
 #ifdef AMPLUSPLUS_SINGLE_THREADED
 #include <boost/signals2/dummy_mutex.hpp>

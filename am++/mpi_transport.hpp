@@ -26,13 +26,11 @@
 #ifndef AMPLUSPLUS_MPI_TRANSPORT_HPP
 #define AMPLUSPLUS_MPI_TRANSPORT_HPP
 
-#include <boost/smart_ptr.hpp>
 #include <boost/bind.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/iterator/counting_iterator.hpp>
-#include <boost/foreach.hpp>
-#include <boost/optional.hpp>
-#include <boost/assert.hpp>
+#include <optional>
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <am++/traits.hpp>

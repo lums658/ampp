@@ -27,9 +27,8 @@
 #define AMPLUSPLUS_DETAIL_SIGNAL_HPP
 
 #include <vector>
-#include <boost/smart_ptr.hpp>
-#include <boost/assert.hpp>
-#include <boost/make_shared.hpp>
+#include <memory>
+#include <cassert>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/bind/apply.hpp>

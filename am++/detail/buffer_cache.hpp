@@ -26,9 +26,8 @@
 #ifndef AMPLUSPLUS_DETAIL_BUFFER_CACHE_HPP
 #define AMPLUSPLUS_DETAIL_BUFFER_CACHE_HPP
 
-#include <boost/smart_ptr.hpp>
 #include <boost/thread.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <boost/noncopyable.hpp>

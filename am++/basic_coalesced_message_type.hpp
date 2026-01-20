@@ -28,13 +28,11 @@
 
 #include <am++/traits.hpp>
 #include <utility>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <vector>
 #include <memory>
 #include <boost/version.hpp>
-#include <boost/smart_ptr.hpp>
 #include <boost/thread.hpp>
-#include <boost/foreach.hpp>
 #include <boost/noncopyable.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>

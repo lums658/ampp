@@ -26,8 +26,8 @@
 #ifndef AMPLUSPLUS_DETAIL_VECTOR_OF_NONCOPYABLE_HPP
 #define AMPLUSPLUS_DETAIL_VECTOR_OF_NONCOPYABLE_HPP
 
-#include <boost/smart_ptr.hpp>
-#include <boost/assert.hpp>
+#include <memory>
+#include <cassert>
 #include <utility>
 
 namespace amplusplus {
@@ -36,11 +36,11 @@ namespace amplusplus {
 template <typename T>
 class vector_of_noncopyable {
   size_t size_, reserved_;
-  boost::scoped_array<T> data_;
+  std::unique_ptr<T[]> data_;
 
   void increase_size(size_t min_new_size) {
     size_t new_size = (std::max)(min_new_size, 2 * reserved_);
-    boost::scoped_array<T> new_data(new T[new_size]);
+    std::unique_ptr<T[]> new_data(new T[new_size]);
     for (size_t i = 0; i < reserved_; ++i) {
       new_data[i].swap(data_[i]);
     }

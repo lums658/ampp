@@ -29,11 +29,10 @@
 // #define BLUE_GENE_P_EXTRAS
 #endif
 
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/bind.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/format.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <am++/make_mpi_datatype.hpp>
 #include <am++/mpi_sinha_kale_ramkumar_termination_detector.hpp>
 #include <am++/mpi_sinha_kale_ramkumar_termination_detector_bgp.hpp>
@@ -350,7 +349,7 @@ bool mpi_transport_event_driven::begin_epoch() {
     MPI_Status st;
     AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, comms[(current_comm + 2) % 3], &flag, &st); AMPLUSPLUS_MPI_CALL_REGION_END
     if (flag) {
-      std::cerr << (boost::format("Found mis-timed message (for previous epoch) from %d tag %d\n") % st.MPI_SOURCE % st.MPI_TAG).str() << std::flush;
+      std::cerr << "Found mis-timed message (for previous epoch) from " << st.MPI_SOURCE << " tag " << st.MPI_TAG << "\n" << std::flush;
       AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Abort(comms[(current_comm + 2) % 3], 9); AMPLUSPLUS_MPI_CALL_REGION_END
     }
   }

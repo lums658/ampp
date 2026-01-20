@@ -26,9 +26,9 @@
 #ifndef AMPLUSPLUS_DETAIL_APPEND_BUFFER_HPP
 #define AMPLUSPLUS_DETAIL_APPEND_BUFFER_HPP
 
-#include <boost/smart_ptr.hpp>
+#include <memory>
 #include <boost/iterator.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <iterator>
 #include <boost/intrusive/detail/get_value_traits.hpp>
 #include <cmath>

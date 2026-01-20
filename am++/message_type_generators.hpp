@@ -26,9 +26,6 @@
 #ifndef AMPLUSPLUS_MESSAGE_TYPE_GENERATORS_HPP
 #define AMPLUSPLUS_MESSAGE_TYPE_GENERATORS_HPP
 
-#include <boost/parameter.hpp>
-#include <boost/assert.hpp>
-#include <boost/utility/enable_if.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/typeof/typeof.hpp>
 #include <am++/transport.hpp>
@@ -78,14 +75,6 @@ namespace amplusplus {
   //   static Gen::type_combination<Arg, Handler, Combine>::type
   //   Gen::generate_combination(const Gen&, const transport&, const Combine&);
   // }
-
-  BOOST_PARAMETER_NAME(generator)
-  BOOST_PARAMETER_NAME(transport)
-  BOOST_PARAMETER_NAME(arg_type)
-  BOOST_PARAMETER_NAME(handler_type)
-  BOOST_PARAMETER_NAME(owner)
-  BOOST_PARAMETER_NAME(sent_part)
-  BOOST_PARAMETER_NAME(reduction)
 
   enum no_reduction_t {no_reduction};
 

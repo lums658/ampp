@@ -29,9 +29,8 @@
 #include <am++/traits.hpp>
 #include <am++/detail/thread_support.hpp>
 #include <am++/message_queue.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/format.hpp>
-#include <boost/assert.hpp>
+#include <memory>
+#include <cassert>
 #include <iostream>
 
 namespace amplusplus {
