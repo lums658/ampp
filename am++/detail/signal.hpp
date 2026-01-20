@@ -29,10 +29,9 @@
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <type_traits>
+#include <functional>
 #include <boost/thread.hpp>
-#include <boost/bind.hpp>
-#include <boost/bind/apply.hpp>
-#include <boost/ref.hpp>
 
 namespace amplusplus {
   namespace detail {
@@ -96,7 +95,7 @@ struct signal0_handler_gen {
   template <typename F>
   struct type: public signal0_handler_base {
     F f;
-    type(typename boost::add_reference<typename boost::add_const<F>::type>::type f): f(f) {}
+    type(typename std::add_lvalue_reference<typename std::add_const<F>::type>::type f): f(f) {}
     void operator()() {f();}
   };
 };
@@ -109,7 +108,7 @@ class signal0: detail::signal_base<detail::signal0_handler_base, detail::signal0
   using base_type::attach;
   using base_type::detach;
   void operator()() {
-    base_type::call(boost::bind(boost::apply<void>(), _1));
+    base_type::call([](detail::signal0_handler_base& h) { h(); });
   }
 };
 
@@ -126,7 +125,7 @@ struct signal1_handler_gen {
   template <typename F>
   struct type: public signal1_handler_base<Arg> {
     F f;
-    type(typename boost::add_reference<typename boost::add_const<F>::type>::type f): f(f) {}
+    type(typename std::add_lvalue_reference<typename std::add_const<F>::type>::type f): f(f) {}
     void operator()(const Arg& a) {f(a);}
   };
 };
@@ -140,16 +139,19 @@ class signal1: detail::signal_base<detail::signal1_handler_base<Arg>, detail::si
   using base_type::attach;
   using base_type::detach;
   void operator()(const Arg& a) {
-    base_type::call(boost::bind(boost::apply<void>(), _1, std::cref(a)));
+    base_type::call([&a](detail::signal1_handler_base<Arg>& h) { h(a); });
   }
 };
 
 template <typename SigClass>
-class scoped_attach: private boost::noncopyable {
+class scoped_attach {
   SigClass& sc;
   void* handle;
 
   public:
+  scoped_attach(const scoped_attach&) = delete;
+  scoped_attach& operator=(const scoped_attach&) = delete;
+
   template <typename F>
   scoped_attach(SigClass& sc, const F& f): sc(sc) {
     handle = sc.attach(f);

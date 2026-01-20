@@ -38,7 +38,6 @@
 #include <boost/mpl/bool.hpp>
 #include <boost/type_traits.hpp>
 #include <type_traits>
-#include <boost/noncopyable.hpp>
 #include <am++/detail/type_info_map.hpp>
 #ifndef BOOST_NO_0X_HDR_TUPLE
 #include <tuple>
@@ -46,9 +45,12 @@
 
 namespace amplusplus {
 
-class scoped_mpi_datatype: boost::noncopyable {
+class scoped_mpi_datatype {
   MPI_Datatype dt;
   public:
+  scoped_mpi_datatype(const scoped_mpi_datatype&) = delete;
+  scoped_mpi_datatype& operator=(const scoped_mpi_datatype&) = delete;
+
   explicit scoped_mpi_datatype(): dt(MPI_DATATYPE_NULL) {}
   // explicit scoped_mpi_datatype(MPI_Datatype dt = MPI_DATATYPE_NULL): dt(dt) {}
   operator MPI_Datatype() const {return dt;}

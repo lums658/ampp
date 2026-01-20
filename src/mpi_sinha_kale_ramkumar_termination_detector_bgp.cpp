@@ -29,14 +29,12 @@
 
 #include <dcmf.h>
 #include <dcmf_collectives.h>
-#include <boost/bind.hpp>
 #include <boost/thread.hpp>
-#include <boost/ref.hpp>
 #include <stdio.h>
 #include <memory>
-#include <boost/type_traits.hpp>
-#include <boost/static_assert.hpp>
+#include <type_traits>
 #include <cassert>
+#include <functional>
 #include <am++/mpi_transport.hpp>
 #include <am++/detail/mpi_global_lock.hpp>
 #include <am++/mpi_sinha_kale_ramkumar_termination_detector_bgp.hpp>
@@ -253,7 +251,7 @@ void mpi_sinha_kale_ramkumar_termination_detector_bgp::setup_end_epoch_with_valu
   prev_nc = 0;
   last_total = (unsigned long)(-1);
   in_td = true;
-  sched.add_idle_task(boost::bind(&mpi_sinha_kale_ramkumar_termination_detector_bgp::poll_for_events, this, _1));
+  sched.add_idle_task([this](scheduler& s) { return poll_for_events(s); });
 }
 
 void mpi_sinha_kale_ramkumar_termination_detector_bgp::increase_activity_count(unsigned long v) {

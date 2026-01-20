@@ -62,7 +62,10 @@
 typedef amplusplus::transport::rank_type rank_type;
 
 template <typename K, typename V, typename AMTransport>
-struct read_only_am_property_map : boost::noncopyable {
+struct read_only_am_property_map {
+  read_only_am_property_map(const read_only_am_property_map&) = delete;
+  read_only_am_property_map& operator=(const read_only_am_property_map&) = delete;
+
   struct get_handler {
     read_only_am_property_map* pm;
     get_handler(): pm(NULL) {}

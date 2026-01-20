@@ -26,8 +26,6 @@
 #ifndef AMPLUSPLUS_MPI_TRANSPORT_HPP
 #define AMPLUSPLUS_MPI_TRANSPORT_HPP
 
-#include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/iterator/counting_iterator.hpp>
 #include <optional>
 #include <cassert>
@@ -148,8 +146,11 @@ namespace detail {
   };
 }
 
-class mpi_transport_event_driven: public transport_base, boost::noncopyable {
+class mpi_transport_event_driven: public transport_base {
   public:
+  mpi_transport_event_driven(const mpi_transport_event_driven&) = delete;
+  mpi_transport_event_driven& operator=(const mpi_transport_event_driven&) = delete;
+
   explicit mpi_transport_event_driven(environment& env, MPI_Comm comm = MPI_COMM_WORLD, int recvDepth =1 , int poll_tasks = 1, int flow_control_count = 10)
     : env(env), reqmgr(env.get_scheduler(), poll_tasks), current_comm(0),
       recvdepth(recvDepth), nthreads(1), use_any_source(false), use_ssend(false),
@@ -277,8 +278,11 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
   const int flow_control_count;
 };
 
-class mpi_message_type: public message_type_base, public boost::noncopyable {
+class mpi_message_type: public message_type_base {
   public:
+  mpi_message_type(const mpi_message_type&) = delete;
+  mpi_message_type& operator=(const mpi_message_type&) = delete;
+
   explicit mpi_message_type(transport trans, MPI_Datatype dt)
     : message_type_base(trans), valid(true), trans(*trans.downcast_to_impl<mpi_transport_event_driven>()), trans_wrapped(trans), dt(dt), handler(), max_count(0), possible_dests(), possible_sources()
   {

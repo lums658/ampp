@@ -29,8 +29,7 @@
 #include <am++/traits.hpp>
 #include <am++/message_queue.hpp>
 #include <am++/detail/thread_support.hpp>
-#include <boost/format.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 
 namespace amplusplus {
 namespace detail {
@@ -79,7 +78,7 @@ void td_thread_wrapper::setup_end_epoch() {
   if (nthreads_in_epoch.fetch_add(-1) == 1) {
     td->setup_end_epoch();
     // fprintf(stderr, "thread_wrapper setup_end_epoch\n");
-    td->get_termination_queue().receive(boost::bind(&td_thread_wrapper::handle_termination_message, this, _1));
+    td->get_termination_queue().receive([this](termination_message m) { handle_termination_message(m); });
   }
 }
 
@@ -89,7 +88,7 @@ void td_thread_wrapper::setup_end_epoch_with_value(uintmax_t val) {
   if (nthreads_in_epoch.fetch_add(-1) == 1) {
     td->setup_end_epoch_with_value(local_finish_value);
     // fprintf(stderr, "thread_wrapper setup_end_epoch_with_value\n");
-    td->get_termination_queue().receive(boost::bind(&td_thread_wrapper::handle_termination_message, this, _1));
+    td->get_termination_queue().receive([this](termination_message m) { handle_termination_message(m); });
   }
 }
 

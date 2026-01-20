@@ -26,24 +26,28 @@
 #ifndef AMPLUSPLUS_SCOPED_EPOCH_HPP
 #define AMPLUSPLUS_SCOPED_EPOCH_HPP
 
-#include <boost/utility.hpp>
-#include <boost/noncopyable.hpp>
 #include <am++/transport.hpp>
 
 namespace amplusplus {
 
-class scoped_epoch: boost::noncopyable {
+class scoped_epoch {
   transport tr;
   public:
+  scoped_epoch(const scoped_epoch&) = delete;
+  scoped_epoch& operator=(const scoped_epoch&) = delete;
+
   scoped_epoch(transport tr): tr(tr) {tr.begin_epoch();}
   ~scoped_epoch() {tr.end_epoch();}
 };
 
-class scoped_epoch_value: boost::noncopyable {
+class scoped_epoch_value {
   transport tr;
   const unsigned long& read_value;
   unsigned long& sum;
   public:
+  scoped_epoch_value(const scoped_epoch_value&) = delete;
+  scoped_epoch_value& operator=(const scoped_epoch_value&) = delete;
+
   scoped_epoch_value(transport tr,
                      const unsigned long& read_value, unsigned long& sum)
     : tr(tr), read_value(read_value), sum(sum) {tr.begin_epoch();}

@@ -188,7 +188,7 @@ namespace amplusplus {
           transport::rank_type dest = get(owner, a);
           mt.message_being_built(dest);
           std::shared_ptr<Arg> buf(new Arg(a));
-          mt.send(buf.get(), 1, dest, boost::bind<void>(eat_sp(), buf)); // Keep ownership of buf
+          mt.send(buf.get(), 1, dest, [buf]() { (void)buf; }); // Keep ownership of buf
         }
         void send_with_tid(const Arg& a, int /*tid*/) {
           this->send(a);
@@ -261,7 +261,7 @@ namespace amplusplus {
   template <typename F, typename Arg>
   struct duplicate_policy_from_projection {
     typedef Arg value_type;
-    typedef typename std::result_of<F(Arg)>::type stored_type;
+    typedef std::invoke_result_t<F, Arg> stored_type;
 
     private:
     F f;

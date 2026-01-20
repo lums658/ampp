@@ -36,9 +36,7 @@
 #include <typeinfo>
 #include <mpi.h>
 #include <boost/thread.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/ref.hpp>
-#include <boost/bind.hpp>
 #include <memory>
 #include <cassert>
 
@@ -80,7 +78,11 @@ struct mpi_completion_message {
 };
 
 template <typename UserInfo>
-class mpi_request_manager: boost::noncopyable {
+class mpi_request_manager {
+  public:
+  mpi_request_manager(const mpi_request_manager&) = delete;
+  mpi_request_manager& operator=(const mpi_request_manager&) = delete;
+
   private:
   std::vector<MPI_Request> reqs;
   std::vector<mpi_request_info<UserInfo> > req_info;
@@ -102,7 +104,7 @@ class mpi_request_manager: boost::noncopyable {
     assert(poll_tasks > 0);
     add_pending.store(0);
     for(int i = 0; i != poll_tasks; ++i)
-      sched.add_runnable(boost::bind(&mpi_request_manager::poll_for_messages, this, _1, need_to_exit)); // Extra argument needed to force a copy
+      sched.add_runnable([this, need_to_exit = this->need_to_exit](scheduler& s) { return poll_for_messages(s, need_to_exit); }); // need_to_exit copy captured by lambda
   }
   ~mpi_request_manager() {/* fprintf(stderr, "~mpi_request_manager() on %p\n", this); */ *need_to_exit = true;}
 

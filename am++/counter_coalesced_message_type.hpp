@@ -32,7 +32,6 @@
 #include <vector>
 #include <memory>
 #include <boost/thread.hpp>
-#include <boost/noncopyable.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>
 #include <stdint.h>
@@ -258,7 +257,7 @@ struct counter_coalesced_message_type_gen {
     this->mt.set_possible_dests(possible_dests_);
     this->mt.set_possible_sources(possible_sources_);
     typedef transport::rank_type rank_type;
-    trans.add_flush_object(boost::bind(&counter_coalesced_message_type::flush, this, alive));
+    trans.add_flush_object([this, alive = this->alive]() { return this->flush(alive); });
     for (size_t i = 0; i < possible_dests_->count(); ++i) {
       rank_type r = possible_dests_->rank_from_index(i);
       assert (r < trans.size());

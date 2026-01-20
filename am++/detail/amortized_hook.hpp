@@ -27,7 +27,6 @@
 #define AMPLUSPLUS_DETAIL_AMORTIZED_HOOK_HPP
 
 #include <boost/intrusive/list.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
 #include <vector>
 #include <algorithm>
@@ -97,8 +96,11 @@ class amortized_hook_entry: public amortized_hook_entry_base {
   append_buffer<slot_data> args;
 };
 
-class amortized_hook: boost::noncopyable {
+class amortized_hook {
   public:
+  amortized_hook(const amortized_hook&) = delete;
+  amortized_hook& operator=(const amortized_hook&) = delete;
+
   void operator()() const {
     for (boost::intrusive::list<amortized_hook_entry_base>::const_iterator
            i = entries.begin();

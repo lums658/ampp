@@ -5,7 +5,6 @@
 #include <pthread.h>
 #include <boost/thread.hpp>
 #include <boost/thread/barrier.hpp>
-#include <boost/bind.hpp>
 #include <cassert>
 #define TRANSPORT_HEADER <am++/BOOST_JOIN(TRANSPORT, _transport).hpp>
 #include TRANSPORT_HEADER

@@ -29,12 +29,10 @@
 #include <am++/traits.hpp>
 #include <am++/detail/thread_support.hpp>
 #include <boost/config.hpp>
-#include <boost/bind.hpp>
 #include <optional>
 #include <functional>
-#include <boost/noncopyable.hpp>
 #include <cassert>
-#include <boost/utility/result_of.hpp>
+#include <type_traits>
 #include <boost/intrusive/slist.hpp>
 #include <list>
 #include <stdio.h>
@@ -71,10 +69,13 @@ class task_impl: public task_base {
 
 typedef task_base* task;
 
-class scheduler: boost::noncopyable {
+class scheduler {
   public:
   enum task_result {tr_remove_from_queue, tr_idle, tr_busy, tr_busy_and_finished};
   typedef task function_type;
+
+  scheduler(const scheduler&) = delete;
+  scheduler& operator=(const scheduler&) = delete;
 
   private:
   amplusplus::detail::mutex lock;
@@ -92,17 +93,12 @@ class scheduler: boost::noncopyable {
   boost::thread_specific_ptr<unsigned int> reentry_count; // Only counts reentries that should disable running handlers.
   // run_queue_type idle_tasks;
 
-#ifndef BOOST_NO_DELETED_FUNCTIONS
-  scheduler(const scheduler&) = delete;
-  scheduler(scheduler&&) = delete;
-#endif
-
   struct delete_task {void operator()(task t) const {delete t;}};
 
   public:
   scheduler() {}
   ~scheduler() {
-    this->run_until(boost::bind(&run_queue_type::empty, &run_queue));
+    this->run_until([this]() { return run_queue.empty(); });
     assert (run_queue.empty());
     // idle_tasks.clear_and_dispose(delete_task());
   }
@@ -214,7 +210,7 @@ namespace detail {
     public:
     explicit delay_t(const F& f, scheduler& sched): f(f), sched(sched) {}
     template <typename Val>
-    void operator()(const Val& val) const {sched.add_runnable(body(boost::bind(f, val)));}
+    void operator()(const Val& val) const {sched.add_runnable(body([f=this->f, val]() { f(val); }));}
   };
 }
 
@@ -224,7 +220,7 @@ detail::delay_t<F> delay(const F& f, scheduler& sched) {
 }
 
 template <typename Val>
-class message_queue: boost::noncopyable {
+class message_queue {
   amplusplus::detail::mutex lock;
   std::list<Val> messages;
   std::list<std::function<void(Val)> > receivers_waiting;
@@ -232,6 +228,9 @@ class message_queue: boost::noncopyable {
   std::shared_ptr<bool> alive;
 
   public:
+  message_queue(const message_queue&) = delete;
+  message_queue& operator=(const message_queue&) = delete;
+
   message_queue(scheduler&): lock(), messages(), receivers_waiting(), receive_all_active(false), alive(new bool(true)) {}
   ~message_queue() {
     // fprintf(stderr, "message_queue::~message_queue %p\n", this);
@@ -239,10 +238,6 @@ class message_queue: boost::noncopyable {
     *alive = false;
     // Might have receivers waiting because of resubmits from things like queue copies
   }
-
-#ifndef BOOST_NO_DELETED_FUNCTIONS
-  message_queue(const message_queue&) = delete;
-#endif
 
   void send(Val msg) {
     // fprintf(stderr, "%p getting send in %p\n", this, (void*)pthread_self());
@@ -373,12 +368,12 @@ void receive_all(receive_only<Val> from, F f) {
 
 template <typename Val>
 void copy_messages(receive_only<Val> from, message_queue<Val>& to) {
-  receive_all(from, boost::bind(&message_queue<Val>::send, std::ref(to), _1));
+  receive_all(from, [&to](const Val& v) { to.send(v); });
 }
 
 template <typename Val, typename F>
-void transform_messages(receive_only<Val> from, F f, message_queue<typename std::result_of<const F(Val)>::type>& to) {
-  receive_all(from, boost::bind(&message_queue<Val>::send, std::ref(to), boost::bind(AMPLUSPLUS_MOVE(f), _1)));
+void transform_messages(receive_only<Val> from, F f, message_queue<std::invoke_result_t<const F, Val>>& to) {
+  receive_all(from, [&to, f=AMPLUSPLUS_MOVE(f)](const Val& v) { to.send(f(v)); });
 }
 
 }

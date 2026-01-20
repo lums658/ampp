@@ -510,8 +510,8 @@ class simple_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
+  typedef std::invoke_result_t<GetKey, arg_type> key_type;
+  typedef std::invoke_result_t<GetValue, arg_type> value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -659,8 +659,8 @@ class locking_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
+  typedef std::invoke_result_t<GetKey, arg_type> key_type;
+  typedef std::invoke_result_t<GetValue, arg_type> value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -792,7 +792,7 @@ class locking_cache_binop_reduction {
         if (any_filled_entries.exchange(1) == 0) {
           cl.message_being_built(dest);
 	  // This flush task may need to be fixed. We need flush tasks to be added once and then check if they have any work to do.
-          cl.get_transport().add_flush_object(boost::bind(&locking_cache_binop_reduction::flush, this, dest));
+          cl.get_transport().add_flush_object([this, dest]() { return this->flush(dest); });
         }
       }
     }
@@ -856,8 +856,8 @@ class per_thread_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
+  typedef std::invoke_result_t<GetKey, arg_type> key_type;
+  typedef std::invoke_result_t<GetValue, arg_type> value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -1026,8 +1026,8 @@ class per_thread_wt_cache_binop_reduction {
   typedef Handler handler_type;
 
   private:
-  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
+  typedef std::invoke_result_t<GetKey, arg_type> key_type;
+  typedef std::invoke_result_t<GetValue, arg_type> value_type;
 
   typedef transport::rank_type rank_type;
 

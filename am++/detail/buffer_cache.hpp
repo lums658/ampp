@@ -30,14 +30,17 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
-#include <boost/noncopyable.hpp>
 #include <am++/detail/thread_support.hpp>
 
 namespace amplusplus {
   namespace detail {
 
 #if 0
-class buffer_cache: boost::noncopyable {
+class buffer_cache {
+  public:
+  buffer_cache(const buffer_cache&) = delete;
+  buffer_cache& operator=(const buffer_cache&) = delete;
+  private:
   std::vector<std::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
   std::mutex all_buffers_lock;
   // Entries in buffer_ptrs are 0 for "unallocated", (void*)1 for "waiting for
@@ -125,7 +128,11 @@ class buffer_cache: boost::noncopyable {
 #endif
 
 #if 1
-class buffer_cache: boost::noncopyable {
+class buffer_cache {
+  public:
+  buffer_cache(const buffer_cache&) = delete;
+  buffer_cache& operator=(const buffer_cache&) = delete;
+  private:
   static const size_t size = (1 << 16);
 
   std::vector<std::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
@@ -199,7 +206,11 @@ class buffer_cache: boost::noncopyable {
 #endif
 
 #if 0
-class buffer_cache: boost::noncopyable {
+class buffer_cache {
+  public:
+  buffer_cache(const buffer_cache&) = delete;
+  buffer_cache& operator=(const buffer_cache&) = delete;
+  private:
   static const size_t size = (1 << 16);
 
   const size_t buffer_size;

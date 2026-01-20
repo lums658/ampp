@@ -199,10 +199,13 @@ class atomic {
 // Lock-based version for thread debugging tools
 namespace amplusplus {namespace detail {
 template <typename T>
-class atomic: boost::noncopyable {
+class atomic {
   mutable std::mutex lock;
   T value;
   public:
+  atomic(const atomic&) = delete;
+  atomic& operator=(const atomic&) = delete;
+
   atomic(T x = T()): lock(), value(x) {}
   T load() const {std::lock_guard<std::mutex> l(lock); return value;}
   void store(T x) {std::lock_guard<std::mutex> l(lock); value = x;}

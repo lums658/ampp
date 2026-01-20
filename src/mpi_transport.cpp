@@ -30,9 +30,8 @@
 #endif
 
 #include <memory>
-#include <boost/bind.hpp>
-#include <boost/noncopyable.hpp>
 #include <cassert>
+#include <functional>
 #include <am++/make_mpi_datatype.hpp>
 #include <am++/mpi_sinha_kale_ramkumar_termination_detector.hpp>
 #include <am++/mpi_sinha_kale_ramkumar_termination_detector_bgp.hpp>
@@ -183,7 +182,7 @@ void mpi_transport_event_driven::initialize() {
     sends_pending_per_dest[i].store(0);
   }
   receive_all(reqmgr.get_mpi_message_queue(),
-              boost::bind(&mpi_transport_event_driven::handle_mpi_completion, this, _1));
+              [this](const detail::mpi_completion_message<detail::mpi_transport_request_info>& m) { handle_mpi_completion(m); });
 }
 
 void mpi_transport_event_driven::handle_mpi_completion(const detail::mpi_completion_message<detail::mpi_transport_request_info>& m) {
@@ -293,7 +292,7 @@ void mpi_message_type::send_untyped(const void* buf, size_t count, transport::ra
   trans.reqmgr.add(req, mpi_request_info<detail::mpi_transport_request_info>(detail::mpi_transport_request_info::make_send_request(this, AMPLUSPLUS_MOVE(buf_deleter)), dest, message_index));
   if (trans.sends_pending_per_dest[dest].load() >= trans.flow_control_count) {
     // fprintf(stderr, "Running flow control starting at %ld requests\n", trans.sends_pending.load());
-    trans.env.get_scheduler().run_until_for_flow_control(boost::bind(load_from_atomic<long>(), &this->trans.sends_pending_per_dest[dest]) < trans.flow_control_count);
+    trans.env.get_scheduler().run_until_for_flow_control([this, dest]() { return this->trans.sends_pending_per_dest[dest].load() < trans.flow_control_count; });
   }
 }
 
@@ -319,11 +318,10 @@ void mpi_message_type::handle_recv_completion(const detail::mpi_completion_messa
   ++trans.handler_calls_pending;
   ++trans.handler_calls_pending_or_active;
   if (false /* trans.handler_calls_pending.load() > 100 */) {
+    auto source = trans.use_any_source ? MPI_ANY_SOURCE : st.MPI_SOURCE;
+    auto recv_num = ri.user_info.receive_number;
     trans.env.get_scheduler().add_runnable(
-      boost::bind(&mpi_message_type::start_one_receive_task,
-                  this,
-                  (trans.use_any_source ? MPI_ANY_SOURCE : st.MPI_SOURCE),
-                  ri.user_info.receive_number));
+      [this, source, recv_num](scheduler& s) { return start_one_receive_task(source, recv_num); });
   } else {
     this->start_one_receive((trans.use_any_source ? MPI_ANY_SOURCE : st.MPI_SOURCE), ri.user_info.receive_number);
   }
@@ -368,8 +366,9 @@ bool mpi_transport_event_driven::begin_epoch() {
     // fprintf(stderr, "mpi_transport_event_driven waiting for termination on %p\n", td->get_termination_queue().debug_get_queue());
     assert (begin_epoch_barrier);
     begin_epoch_barrier->wait();
+    auto* term_queue_ptr = term_queue.get();
     td->get_termination_queue().receive( // For this thread only
-      delay(boost::bind(&mpi_transport_event_driven::handle_termination_event, this, _1, std::ref(*term_queue)),
+      delay([this, term_queue_ptr](termination_message m) { handle_termination_event(m, *term_queue_ptr); },
             env.get_scheduler()));
     return first;
   }

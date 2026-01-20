@@ -33,7 +33,6 @@
 #include <memory>
 #include <boost/version.hpp>
 #include <boost/thread.hpp>
-#include <boost/noncopyable.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>
 #include <stdint.h>
@@ -67,9 +66,6 @@ struct basic_coalesced_message_type_gen {
 //   flush (both versions)
 template <typename Arg, typename Handler, typename BufferSorter>
 class basic_coalesced_message_type
-#ifdef BOOST_NO_DEFAULTED_FUNCTIONS
-                                         : boost::noncopyable
-#endif
 {
   private:
   enum message_buffer_append_state {normal = 0, first_message = 1, buffer_now_full = 2, singleton_buffer = 3};
@@ -172,10 +168,9 @@ class basic_coalesced_message_type
     this->buf_cache.reset();
   }
 
-#ifndef BOOST_NO_DEFAULTED_FUNCTIONS
   basic_coalesced_message_type(basic_coalesced_message_type&&) = default;
   basic_coalesced_message_type(const basic_coalesced_message_type&) = delete;
-#endif
+  basic_coalesced_message_type& operator=(const basic_coalesced_message_type&) = delete;
 
   private:
   void send_buffer(const message_buffer& buf, transport::rank_type dest) {
@@ -229,7 +224,7 @@ class basic_coalesced_message_type
     switch (s) {
       case normal: break;
       case first_message: {
-        trans.add_flush_object(boost::bind(&basic_coalesced_message_type::flush, this, dest));
+        trans.add_flush_object([this, dest]() { return this->flush(dest); });
         if (!buf_ref.registered_with_td) {
           this->mt.message_being_built(dest);
           buf_ref.registered_with_td = true;
