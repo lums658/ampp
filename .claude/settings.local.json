@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh auth switch:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git init:*)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop status --short)",
+      "Bash(git add:*)"
+    ]
+  }
+}

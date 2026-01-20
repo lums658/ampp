@@ -1,0 +1,63 @@
+# Build artifacts
+*.o
+*.lo
+*.la
+*.a
+*.so
+*.dylib
+.libs/
+.deps/
+
+# Autotools generated files
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+missing
+stamp-h1
+ar-lib
+compile
+test-driver
+
+# Package config (generated)
+libampp.pc
+libampp-uninstalled.pc
+libampp-uninstalled.sh
+libampp.la
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# CMake build directories
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+
+# Test binaries
+tests/bfs_test
+tests/bfs_threaded_test
+tests/matrix_vector_test
+tests/ping_pong_test
+tests/ring_test
+tests/buffer_test
+tests/tutorial_*
+
+# OS files
+.DS_Store
+Thumbs.db
