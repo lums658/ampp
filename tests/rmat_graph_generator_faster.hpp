@@ -31,7 +31,7 @@
 #include <vector>
 #include <queue>
 #include <map>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <boost/shared_ptr.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_01.hpp>

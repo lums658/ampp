@@ -54,7 +54,7 @@
 #include <mpi.h>
 #include <nbc.h>
 #endif
-#include <boost/assert.hpp>
+#include <cassert>
 
 inline void rdtscll(unsigned long long& x) {x = 0;}
 
@@ -92,7 +92,7 @@ void run_mpi(int rank, int size) {
   std::vector<unsigned long long> test_tsc(tests);
   size_t datasize = 32 * msgs;
   char* data = (char*)alloca(datasize);
-  BOOST_ASSERT (data);
+  assert (data);
   for(int i=0; i<tests; ++i) {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -251,7 +251,7 @@ void run_mpi_test(int rank, int size) {
   std::vector<unsigned long long> test_tsc(tests);
   size_t datasize = 32 * msgs;
   char* data = (char*)alloca(datasize);
-  BOOST_ASSERT (data);
+  assert (data);
   for(int i=0; i<tests; ++i) {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -315,7 +315,7 @@ void run_mpi_iprobe(int rank, int size) {
   std::vector<unsigned long long> test_tsc(tests);
   size_t datasize = 32 * msgs;
   char* data = (char*)alloca(datasize);
-  BOOST_ASSERT (data);
+  assert (data);
   for(int i=0; i<tests; ++i) {
     MPI_Barrier(MPI_COMM_WORLD);
 

@@ -67,7 +67,7 @@
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random.hpp>
 #include <boost/smart_ptr.hpp>
-#include <boost/lexical_cast.hpp>
+#include <string>
 #include <boost/graph/compressed_sparse_row_graph.hpp>
 #include <utility>
 #include <functional>
@@ -363,7 +363,7 @@ int do_one_thread(int argc, char** argv, amplusplus::environment& env) {
     return 1;
   }
 
-  int num_threads = boost::lexical_cast<int>(argv[1]);
+  int num_threads = std::stoi(argv[1]);
 
   rank_type rank, size;
   {

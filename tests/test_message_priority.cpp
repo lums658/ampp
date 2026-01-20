@@ -6,6 +6,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/bind.hpp>
+#include <cassert>
 #define TRANSPORT_HEADER <am++/BOOST_JOIN(TRANSPORT, _transport).hpp>
 #include TRANSPORT_HEADER
 
@@ -110,7 +111,7 @@ void run_test(amplusplus::environment& env) {
   amplusplus::transport trans = env.create_transport();
   std::cout << "Transport size " << trans.size() << std::endl;
   
-  BOOST_ASSERT (trans.size() == 2);
+  assert (trans.size() == 2);
 
   // sending normal messages
   amplusplus::message_type<int> tm = trans.create_message_type<int>();
@@ -178,7 +179,7 @@ void run_test(amplusplus::environment& env) {
 	// for rank 1 - we should be receiving priority messages before non priority messages
 	std::cout << "The difference - " << non_priority_time - priority_time <<  " the ratio - " << non_priority_time / priority_time <<  std::endl;
 	
-	BOOST_ASSERT(priority_time < non_priority_time * 0.99);
+	assert(priority_time < non_priority_time * 0.99);
   }
   
 }

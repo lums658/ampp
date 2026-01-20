@@ -46,8 +46,7 @@
 #include <am++/basic_coalesced_message_type.hpp>
 #include <am++/counter_coalesced_message_type.hpp>
 #include <boost/pool/object_pool.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <stdio.h>
 #include <string>
 #include <sstream>

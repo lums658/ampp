@@ -39,7 +39,7 @@
 #include <vector>
 #include <iostream>
 #include <boost/thread/thread.hpp>
-#include <boost/lexical_cast.hpp>
+#include <string>
 #include <random>
 
 struct fib_helper {
@@ -157,8 +157,8 @@ fib::fib(amplusplus::transport& trans, unsigned int nthreads) : trans(trans), fi
   }
 
 int main(int argc, char* argv[]) {
-  const unsigned int nthreads = boost::lexical_cast<unsigned int>(argv[1]);
-  const unsigned int input = boost::lexical_cast<unsigned int>(argv[2]);
+  const unsigned int nthreads = static_cast<unsigned int>(std::stoul(argv[1]));
+  const unsigned int input = static_cast<unsigned int>(std::stoul(argv[2]));
 
   amplusplus::environment env = amplusplus::mpi_environment(argc, argv, true);
   amplusplus::transport trans = env.create_transport();
@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
 
   boost::scoped_array<boost::thread> threads(new boost::thread[nthreads - 1]);
   for (int i = 0; i < nthreads - 1; ++i) {
-    boost::thread thr(boost::ref(f), i + 1);
+    boost::thread thr(std::ref(f), i + 1);
     threads[i].swap(thr);
   }
 

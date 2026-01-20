@@ -55,7 +55,7 @@
 #include <boost/graph/iteration_macros.hpp>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/graph/compressed_sparse_row_graph.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <utility>
 #include <functional>
 
@@ -123,7 +123,7 @@ struct read_only_am_property_map : boost::noncopyable {
       fprintf(stderr, "%zu: Failed to find %zu sent by %d\n", rank, key, (int)(key / chunk_size));
     }
 #endif
-    BOOST_ASSERT (ghost_cells.find(key) != ghost_cells.end());
+    assert (ghost_cells.find(key) != ghost_cells.end());
     return ghost_cells.find(key)->second;
   }
 };
@@ -152,16 +152,16 @@ void do_test(AMTransport& transport, const Graph& my_graph, const std::vector<do
     double sum = 0;
     BGL_FORALL_OUTEDGES_T(u, e, my_graph, Graph) {
       size_t v = target(e, my_graph);
-      // BOOST_ASSERT (get(boost::edge_index, my_graph, e) < A_local.size());
+      // assert (get(boost::edge_index, my_graph, e) < A_local.size());
       double coeff = A_local[get(boost::edge_index, my_graph, e)];
       if (v < my_start || v >= my_end) {
         sum += coeff * pm.get_remote_val(v);
       } else {
-        // BOOST_ASSERT (v >= my_start && v < my_end);
+        // assert (v >= my_start && v < my_end);
         sum += coeff * pm.get_local_val(v);
       }
     }
-    // BOOST_ASSERT (u < my_size);
+    // assert (u < my_size);
     b_local[u] = sum;
   }
   {amplusplus::scoped_epoch e(transport);}

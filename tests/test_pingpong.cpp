@@ -46,8 +46,8 @@
 #include <am++/basic_coalesced_message_type.hpp>
 #include <am++/counter_coalesced_message_type.hpp>
 #include <boost/pool/object_pool.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/assert.hpp>
+#include <string>
+#include <cassert>
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -166,16 +166,17 @@ struct pingpong_handler_non_coalesced_sized {
   void operator()(int source, const int* buf, int /*count*/) const {
     int data = *buf;
     // fprintf(stderr, "source = %d, data = %d\n", source, data);
+    auto msg_copy = this->msg; // Copy to local for lambda capture
     if (source != 0) { // rank 0
       if (data + 1 != reps) {
-        *msg = data + 1;
+        *msg_copy = data + 1;
         tm.message_being_built(1);
-        tm.send(msg.get(), size, 1, boost::bind(empty_deleter(), msg));
-      } 
+        tm.send(msg_copy.get(), size, 1, [msg_copy]() {});
+      }
     } else { // rank 1
-      *msg = data;
+      *msg_copy = data;
       tm.message_being_built(0);
-      tm.send(msg.get(), size, 0, boost::bind(empty_deleter(), msg));
+      tm.send(msg_copy.get(), size, 0, [msg_copy]() {});
     }
   }
 };
@@ -244,7 +245,7 @@ void do_one_thread(amplusplus::environment& env) {
 
   if (1) {
     amplusplus::transport trans = env.create_transport();
-    BOOST_ASSERT (trans.size() >= 2);
+    assert (trans.size() >= 2);
     amplusplus::message_type<int> tm = trans.create_message_type<int>();
     tm.set_max_count(0);
     tm.set_handler(pingpong_handler_empty_reply(reps, tm));
@@ -264,7 +265,7 @@ void do_one_thread(amplusplus::environment& env) {
 
   if (1) {
     amplusplus::transport trans = env.create_transport();
-    BOOST_ASSERT (trans.size() >= 2);
+    assert (trans.size() >= 2);
     amplusplus::message_type<int> tm = trans.create_message_type<int>();
     tm.set_max_count(1);
     tm.set_handler(pingpong_handler_non_coalesced(reps, tm));
@@ -290,19 +291,19 @@ void do_one_thread(amplusplus::environment& env) {
       if (size >= 4096) actual_reps /= (size / 4096);
       if (actual_reps <= 1) actual_reps = 2;
       amplusplus::transport trans = env.create_transport();
-      BOOST_ASSERT (trans.size() >= 2);
+      assert (trans.size() >= 2);
       amplusplus::message_type<int> tm = trans.create_message_type<int>();
       tm.set_max_count(size);
       tm.set_handler(pingpong_handler_non_coalesced_sized(actual_reps, tm, size));
       amplusplus::scoped_epoch epoch(trans);
       boost::shared_ptr<int> msg(pingpong_handler_non_coalesced_sized::allocate(tm.get_transport(), size));
       {
-        timer t("AM++ no coalescing (size = " + boost::lexical_cast<std::string>(size * sizeof(int)) + ")", actual_reps * 2, size * sizeof(int), (trans.rank() == 0));
+        timer t("AM++ no coalescing (size = " + std::to_string(size * sizeof(int)) + ")", actual_reps * 2, size * sizeof(int), (trans.rank() == 0));
         if (trans.rank() == 0) {
           // boost::shared_ptr<int> msg = boost::make_shared<int>(0);
           *msg = 0;
           tm.message_being_built(1);
-          tm.send(msg.get(), size, 1, boost::bind(empty_deleter(), msg));
+          tm.send(msg.get(), size, 1, [msg]() {});
         }
       }
     }
@@ -310,7 +311,7 @@ void do_one_thread(amplusplus::environment& env) {
 
   if (1) {
     amplusplus::transport trans = env.create_transport();
-    BOOST_ASSERT (trans.size() >= 2);
+    assert (trans.size() >= 2);
     amplusplus::basic_coalesced_message_type<int, pingpong_handler_coalesced_basic> tm(amplusplus::basic_coalesced_message_type_gen(1), trans);
     tm.set_handler(pingpong_handler_coalesced_basic(reps, tm));
     amplusplus::scoped_epoch epoch(trans);
@@ -325,7 +326,7 @@ void do_one_thread(amplusplus::environment& env) {
 
   if (1) {
     amplusplus::transport trans = env.create_transport();
-    BOOST_ASSERT (trans.size() >= 2);
+    assert (trans.size() >= 2);
     amplusplus::basic_coalesced_message_type<int, pingpong_handler_coalesced_basic> tm(amplusplus::basic_coalesced_message_type_gen(1), trans);
     tm.set_handler(pingpong_handler_coalesced_basic(reps, tm));
     {

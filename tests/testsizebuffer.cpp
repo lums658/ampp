@@ -47,8 +47,7 @@
 #include <am++/basic_coalesced_message_type.hpp>
 #include <am++/size_coalesced_message_type.hpp>
 #include <boost/pool/object_pool.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <stdio.h>
 #include <string>
 #include <sstream>
@@ -216,7 +215,7 @@ int main(int argc, char** argv) {
 
     boost::scoped_array<boost::thread> threads(new boost::thread[nthreads - 1]);
     for (int i = 0; i < nthreads - 1; ++i) {
-      boost::thread thr(boost::ref(vbt), i + 1);
+      boost::thread thr(std::ref(vbt), i + 1);
       threads[i].swap(thr);
     }
 	  
@@ -262,7 +261,7 @@ int main(int argc, char** argv) {
 
     boost::scoped_array<boost::thread> threads(new boost::thread[nthreads - 1]);
     for (int i = 0; i < nthreads - 1; ++i) {
-      boost::thread thr(boost::ref(vbt), i + 1);
+      boost::thread thr(std::ref(vbt), i + 1);
       threads[i].swap(thr);
     }
 	  
@@ -293,7 +292,7 @@ int main(int argc, char** argv) {
 
     boost::scoped_array<boost::thread> threads(new boost::thread[nthreads - 1]);
     for (int i = 0; i < nthreads - 1; ++i) {
-      boost::thread thr(boost::ref(vbt), i + 1);
+      boost::thread thr(std::ref(vbt), i + 1);
       threads[i].swap(thr);
     }
 	  

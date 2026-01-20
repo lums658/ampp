@@ -67,7 +67,7 @@
 #include <boost/smart_ptr.hpp>
 #include <boost/graph/compressed_sparse_row_graph.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <utility>
 #include <functional>
 #include <iostream>
@@ -147,7 +147,7 @@ struct update_vertex_handler {
 
   // void operator()(rank_type source, const update_vertex_data& data) const {
   void operator()(const update_vertex_data& data) const {
-    BOOST_ASSERT (data.v >= my_start && data.v < my_end);
+    assert (data.v >= my_start && data.v < my_end);
     // fprintf(stderr, "Got %zu %s range\n", (size_t)data.v, (data.v >= my_start && data.v < my_end) ? "in" : "out of");
     if (get(*visited, data.v - my_start) == boost::two_bit_white) {
       // fprintf(stderr, "Enqueueing %zu\n", v);
