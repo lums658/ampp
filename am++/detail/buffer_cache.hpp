@@ -39,8 +39,8 @@ namespace amplusplus {
 
 #if 0
 class buffer_cache: boost::noncopyable {
-  std::vector<boost::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
-  boost::mutex all_buffers_lock;
+  std::vector<std::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
+  std::mutex all_buffers_lock;
   // Entries in buffer_ptrs are 0 for "unallocated", (void*)1 for "waiting for
   // someone else to do allocation", and a pointer for "allocated"
   amplusplus::detail::atomic<amplusplus::detail::atomic<void*>*> buffer_ptrs[20];
@@ -63,7 +63,7 @@ class buffer_cache: boost::noncopyable {
     free_buf(amplusplus::detail::atomic<void*>* loc_in_page_list): loc_in_page_list(loc_in_page_list) {}
     void operator()(void* b) {
       void* old_val = loc_in_page_list->swap(b);
-      BOOST_ASSERT (old_val == 0);
+      assert (old_val == 0);
     }
   };
 
@@ -79,7 +79,7 @@ class buffer_cache: boost::noncopyable {
     for (int i = 0; i < num_pages; ++i) delete[] buffer_ptrs[i].load();
   }
 
-  boost::shared_ptr<void> allocate() {
+  std::shared_ptr<void> allocate() {
     void* p = 0;
     amplusplus::detail::atomic<void*>* p_ptr = 0;
     size_t index = 0;
@@ -111,15 +111,15 @@ class buffer_cache: boost::noncopyable {
       }
     }
     need_new_buffer: {
-      boost::shared_ptr<void> buf = pool.alloc();
+      std::shared_ptr<void> buf = pool.alloc();
       {
-        boost::scoped_lock<boost::mutex> l(all_buffers_lock);
+        boost::scoped_lock<std::mutex> l(all_buffers_lock);
         all_buffers.push_back(buf);
       }
       return buf.get();
     }
     have_buffer: {
-      return boost::shared_ptr<void>(p, free_buf(p_ptr));
+      return std::shared_ptr<void>(p, free_buf(p_ptr));
     }
   }
 };
@@ -129,24 +129,24 @@ class buffer_cache: boost::noncopyable {
 class buffer_cache: boost::noncopyable {
   static const size_t size = (1 << 16);
 
-  std::vector<boost::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
+  std::vector<std::shared_ptr<void> > all_buffers; // Keeps ownership of all of them
   amplusplus::detail::mutex all_buffers_lock;
   amplusplus::detail::atomic<void*> buffer_ptrs[size];
   amplusplus::detail::atomic<size_t> last_entry_written_plus_1;
   transport trans;
   const size_t buffer_size;
-  boost::shared_ptr<bool> cache_deleted;
+  std::shared_ptr<bool> cache_deleted;
 
   struct free_buf {
-    boost::shared_ptr<bool> cache_deleted;
+    std::shared_ptr<bool> cache_deleted;
     amplusplus::detail::atomic<void*>* p_ptr;
-    free_buf(boost::shared_ptr<bool> cache_deleted, amplusplus::detail::atomic<void*>* p_ptr)
+    free_buf(std::shared_ptr<bool> cache_deleted, amplusplus::detail::atomic<void*>* p_ptr)
       : cache_deleted(cache_deleted), p_ptr(p_ptr) {}
     void operator()(void* b) {
       if (*cache_deleted) return;
 #ifndef NDEBUG
       void* old_val = p_ptr->exchange(b);
-      BOOST_ASSERT (old_val == 0);
+      assert (old_val == 0);
 #else
       p_ptr->store(b);
 #endif
@@ -166,8 +166,8 @@ class buffer_cache: boost::noncopyable {
     *cache_deleted = true;
   }
 
-  boost::shared_ptr<void> allocate() {
-    if (buffer_size == 0) return boost::shared_ptr<void>();
+  std::shared_ptr<void> allocate() {
+    if (buffer_size == 0) return std::shared_ptr<void>();
     void* p = 0;
     amplusplus::detail::atomic<void*>* p_ptr = 0;
     for (size_t i = 0; i < last_entry_written_plus_1.load(); ++i) {
@@ -178,10 +178,10 @@ class buffer_cache: boost::noncopyable {
       }
     }
     {
-      boost::shared_ptr<void> buf = trans.alloc_memory(buffer_size);
-      BOOST_ASSERT (buf);
+      std::shared_ptr<void> buf = trans.alloc_memory(buffer_size);
+      assert (buf);
       {
-        boost::lock_guard<amplusplus::detail::mutex> l(all_buffers_lock);
+        std::lock_guard<amplusplus::detail::mutex> l(all_buffers_lock);
         all_buffers.push_back(buf);
         // fprintf(stderr, "%p increased buffer count to %zu\n", this, all_buffers.size());
       }
@@ -193,8 +193,8 @@ class buffer_cache: boost::noncopyable {
       }
     }
     have_buffer:
-    BOOST_ASSERT (p);
-    return boost::shared_ptr<void>(p, free_buf(cache_deleted, p_ptr));
+    assert (p);
+    return std::shared_ptr<void>(p, free_buf(cache_deleted, p_ptr));
   }
 };
 #endif
@@ -219,12 +219,12 @@ class buffer_cache: boost::noncopyable {
 
   ~buffer_cache() {}
 
-  boost::shared_ptr<void> allocate() {
-    if (buffer_size == 0) return boost::shared_ptr<void>();
+  std::shared_ptr<void> allocate() {
+    if (buffer_size == 0) return std::shared_ptr<void>();
     void* p = 0;
     AMPLUSPLUS_MPI_CALL_REGION MPI_Alloc_mem(buffer_size, MPI_INFO_NULL, &p);
-    BOOST_ASSERT (p);
-    return boost::shared_ptr<void>(p, free_buf());
+    assert (p);
+    return std::shared_ptr<void>(p, free_buf());
   }
 };
 #endif

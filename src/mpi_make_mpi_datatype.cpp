@@ -35,10 +35,10 @@
 #include <boost/smart_ptr.hpp>
 
 namespace amplusplus {
-  detail::type_info_map<boost::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;
+  detail::type_info_map<std::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;
 
 MPI_Datatype get_mpi_datatype(const std::type_info& ti) {
-  const boost::shared_ptr<make_mpi_datatype_base>* p = mpi_datatype_map.lookup(ti);
+  const std::shared_ptr<make_mpi_datatype_base>* p = mpi_datatype_map.lookup(ti);
   if (!p) {
     fprintf(stderr, "Did not find MPI datatype for C++ type %s; make sure to register it with amplusplus::register_mpi_datatype()\n",
             ti.name());

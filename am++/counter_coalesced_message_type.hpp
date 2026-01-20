@@ -153,7 +153,7 @@ struct counter_coalesced_message_type_gen {
   class counter_coalesced_message_type :
     CoalescingHeuristicGen::template Heuristic<counter_coalesced_message_type<Arg, Handler, BufferSorter, CoalescingHeuristicGen>> {
   private:
-  struct sp_deleter {boost::shared_ptr<void> p; sp_deleter(const boost::shared_ptr<void>& p): p(p) {} void operator()() {p.reset();}};
+  struct sp_deleter {std::shared_ptr<void> p; sp_deleter(const std::shared_ptr<void>& p): p(p) {} void operator()() {p.reset();}};
 
   struct message_buffer {
     amplusplus::detail::atomic<unsigned int> count_allocated, count_written;
@@ -161,10 +161,10 @@ struct counter_coalesced_message_type_gen {
     static const unsigned int count_mask = sender_active - 1;
     unsigned int max_count;
     amplusplus::detail::atomic<bool> registered_with_td;
-    boost::shared_ptr<void> data_owner;
+    std::shared_ptr<void> data_owner;
     Arg* data;
     struct {
-      struct size_test {amplusplus::detail::atomic<unsigned int> a, b; unsigned int c; amplusplus::detail::atomic<bool> c2; boost::shared_ptr<void> d; Arg* e;};
+      struct size_test {amplusplus::detail::atomic<unsigned int> a, b; unsigned int c; amplusplus::detail::atomic<bool> c2; std::shared_ptr<void> d; Arg* e;};
       char padding[128 - sizeof(size_test)];
     } false_sharing_padding;
 
@@ -174,7 +174,7 @@ struct counter_coalesced_message_type_gen {
           max_count(max_count),
           registered_with_td(false),
           data_owner(),
-          data(0) {BOOST_ASSERT (max_count != 0);}
+          data(0) {assert (max_count != 0);}
 
     message_buffer()
       : count_allocated(0), count_written(0), max_count(0), registered_with_td(false), data_owner(), data(0)
@@ -189,19 +189,19 @@ struct counter_coalesced_message_type_gen {
         data(mb.data)
     {
       // Only empty buffers should be copied
-      BOOST_ASSERT (mb.count_allocated.load() == 0);
-      BOOST_ASSERT (mb.count_written.load() == 0);
-      BOOST_ASSERT (mb.registered_with_td.load() == false);
+      assert (mb.count_allocated.load() == 0);
+      assert (mb.count_written.load() == 0);
+      assert (mb.registered_with_td.load() == false);
     }
 
     message_buffer& operator=(const message_buffer& mb) {
       // Only empty buffers should be copied, and only onto empty buffers
-      BOOST_ASSERT (mb.count_allocated.load() == 0);
-      BOOST_ASSERT (mb.count_written.load() == 0);
-      BOOST_ASSERT (mb.registered_with_td.load() == false);
-      BOOST_ASSERT (count_allocated.load() == 0);
-      BOOST_ASSERT (count_written.load() == 0);
-      BOOST_ASSERT (registered_with_td.load() == false);
+      assert (mb.count_allocated.load() == 0);
+      assert (mb.count_written.load() == 0);
+      assert (mb.registered_with_td.load() == false);
+      assert (count_allocated.load() == 0);
+      assert (count_written.load() == 0);
+      assert (registered_with_td.load() == false);
       max_count = mb.max_count;
       data = mb.data;
       data_owner = mb.data_owner;
@@ -209,16 +209,16 @@ struct counter_coalesced_message_type_gen {
     }
 
     ~message_buffer() {
-      BOOST_ASSERT (count_allocated.load() == 0);
-      BOOST_ASSERT (count_written.load() == 0);
-      BOOST_ASSERT (registered_with_td.load() == false);
+      assert (count_allocated.load() == 0);
+      assert (count_written.load() == 0);
+      assert (registered_with_td.load() == false);
     }
 
     bool empty() const {
       return count_allocated.load() == 0;
     }
 
-    void clear(const boost::shared_ptr<void>& new_data_owner) {
+    void clear(const std::shared_ptr<void>& new_data_owner) {
       data_owner = new_data_owner;
       data = static_cast<Arg*>(data_owner.get());
       registered_with_td.store(false);
@@ -248,12 +248,12 @@ struct counter_coalesced_message_type_gen {
       last_active(trans.size()),
       coalescing_size(gen.coalescing_size),
       buffer_sorter(buf_sorter), base_type(gen.ch_gen),
-      alive(boost::make_shared<bool>(true))
+      alive(std::make_shared<bool>(true))
   {
-    BOOST_ASSERT (coalescing_size != 0);
+    assert (coalescing_size != 0);
     message_cnt.store(0);
-    if (!possible_dests_) possible_dests_ = boost::make_shared<detail::all_ranks>(trans.size());
-    if (!possible_sources_) possible_sources_ = boost::make_shared<detail::all_ranks>(trans.size());
+    if (!possible_dests_) possible_dests_ = std::make_shared<detail::all_ranks>(trans.size());
+    if (!possible_sources_) possible_sources_ = std::make_shared<detail::all_ranks>(trans.size());
     this->mt.set_max_count(gen.coalescing_size);
     this->mt.set_handler(raw_message_handler(*this));
     this->mt.set_possible_dests(possible_dests_);
@@ -262,7 +262,7 @@ struct counter_coalesced_message_type_gen {
     trans.add_flush_object(boost::bind(&counter_coalesced_message_type::flush, this, alive));
     for (size_t i = 0; i < possible_dests_->count(); ++i) {
       rank_type r = possible_dests_->rank_from_index(i);
-      BOOST_ASSERT (r < trans.size());
+      assert (r < trans.size());
       outgoing_buffers[r] = message_buffer(gen.coalescing_size);
       outgoing_buffers[r].clear(buf_cache->allocate());
       last_active[r] = 0;
@@ -289,16 +289,16 @@ struct counter_coalesced_message_type_gen {
   private:
   bool send_buffer(message_buffer& buf, unsigned int my_id, transport::rank_type dest) {
     // fprintf(stderr, "%zu: send_buffer %08x to %zu, current state is %08x\n", trans.rank(), my_id, dest, buf.count_allocated.load());
-    BOOST_ASSERT (buf.count_allocated.load() & message_buffer::sender_active);
+    assert (buf.count_allocated.load() & message_buffer::sender_active);
     const unsigned int count = my_id & message_buffer::count_mask;
     if ((my_id & message_buffer::sender_active) != 0) return false;
-    BOOST_ASSERT (!!buf.data_owner);
-    BOOST_ASSERT (count <= buf.max_count);
+    assert (!!buf.data_owner);
+    assert (count <= buf.max_count);
     if (count != 0) {
       while (buf.count_written.load() != count) {amplusplus::detail::do_pause();} // Make sure all elements are written, must be an acquire so we can read data in the buffer
-      BOOST_ASSERT (buf.registered_with_td.load() == true); // This may not be true before the previous line's while loop is done
+      assert (buf.registered_with_td.load() == true); // This may not be true before the previous line's while loop is done
       Arg* send_data = buf.data;
-      boost::shared_ptr<void> send_data_owner = buf.data_owner;
+      std::shared_ptr<void> send_data_owner = buf.data_owner;
       buf.clear(buf_cache->allocate());
       // fprintf(stderr, "%zu: actual send %u to %zu, current state is %08x\n", trans.rank(), count, dest, buf.count_allocated.load());
       this->mt.send(send_data, count, dest, sp_deleter(send_data_owner));
@@ -343,7 +343,7 @@ struct counter_coalesced_message_type_gen {
 
 
   void send(const arg_type& arg, transport::rank_type dest) {
-    BOOST_ASSERT (trans.is_valid_rank(dest));
+    assert (trans.is_valid_rank(dest));
     message_buffer& buf = outgoing_buffers[dest];
     const unsigned int max_count = buf.max_count;
     while (true) {
@@ -360,9 +360,9 @@ struct counter_coalesced_message_type_gen {
       // fprintf(stderr, "send %08x\n", my_id);
       if (my_id & message_buffer::sender_active) continue;
       if ((my_id & message_buffer::count_mask) >= max_count) continue;
-      BOOST_ASSERT ((my_id & message_buffer::count_mask) < max_count);
-      BOOST_ASSERT (buf.data_owner);
-      BOOST_ASSERT (buf.data);
+      assert ((my_id & message_buffer::count_mask) < max_count);
+      assert (buf.data_owner);
+      assert (buf.data);
       buf.data[my_id & message_buffer::count_mask] = arg;
       if ((my_id & message_buffer::count_mask) == max_count - 1) {
         buf.count_allocated.store(message_buffer::sender_active);
@@ -394,7 +394,7 @@ struct counter_coalesced_message_type_gen {
   }
 
   void message_being_built(transport::rank_type dest) {
-    BOOST_ASSERT (trans.is_valid_rank(dest));
+    assert (trans.is_valid_rank(dest));
     message_buffer& buf = this->outgoing_buffers[dest];
     bool was_registered = buf.registered_with_td.exchange(true);
     if (!was_registered) {
@@ -402,13 +402,13 @@ struct counter_coalesced_message_type_gen {
     }
   }
 
-  bool flush(boost::shared_ptr<bool> alive) {
-    BOOST_ASSERT (alive.get());
+  bool flush(std::shared_ptr<bool> alive) {
+    assert (alive.get());
     if(!*alive) return false;
     // fprintf(stderr, "%zu: counter_coalesced_message_type::flush(%zu)\n", trans.rank(), dest);
     for (size_t i = 0; i < this->mt.get_possible_dests()->count(); ++i) {
       rank_type r = this->mt.get_possible_dests()->rank_from_index(i);
-      BOOST_ASSERT (trans.is_valid_rank(r));
+      assert (trans.is_valid_rank(r));
       message_buffer& buf = this->outgoing_buffers[r];
       const unsigned int max_count = buf.max_count;
       unsigned int my_id = buf.count_allocated.load();
@@ -437,13 +437,13 @@ struct counter_coalesced_message_type_gen {
   private:
   transport trans;
   message_type<Arg> mt;
-  boost::scoped_ptr<detail::buffer_cache> buf_cache;
+  std::unique_ptr<detail::buffer_cache> buf_cache;
   handler_type handler;
   std::vector<message_buffer> outgoing_buffers;
   std::vector<amplusplus::detail::atomic<unsigned int> > last_active;
   size_t coalescing_size;
   BufferSorter buffer_sorter;
-  boost::shared_ptr<bool> alive;
+  std::shared_ptr<bool> alive;
   amplusplus::detail::atomic<unsigned int>  message_cnt;
   typedef typename CoalescingHeuristicGen::template Heuristic<counter_coalesced_message_type> base_type;
   CoalescingHeuristicGen heuristic;

@@ -56,13 +56,13 @@ bool td_thread_wrapper::begin_epoch() {
   per_thread_data& my_thread_data = *thread_data_ptr;
 
   my_thread_data.id = (thread_id_counter.fetch_add(1) % nthr);
-  BOOST_ASSERT (my_thread_data.activity_count == 0);
+  assert (my_thread_data.activity_count == 0);
   my_thread_data.activity_count = 0;
-  BOOST_ASSERT (my_thread_data.id >= 0 && my_thread_data.id < nthr && my_thread_data.id < (int)msg_queues.size());
+  assert (my_thread_data.id >= 0 && my_thread_data.id < nthr && my_thread_data.id < (int)msg_queues.size());
   msg_queues[my_thread_data.id] = &my_thread_data.term_queue;
 
   if (my_thread_data.id == 0) {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
     local_finish_value = 0;
     nthreads_active.store(0);
     nthreads_in_epoch.store(nthreads_total);
@@ -75,7 +75,7 @@ bool td_thread_wrapper::begin_epoch() {
 }
 
 void td_thread_wrapper::setup_end_epoch() {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   if (nthreads_in_epoch.fetch_add(-1) == 1) {
     td->setup_end_epoch();
     // fprintf(stderr, "thread_wrapper setup_end_epoch\n");
@@ -84,7 +84,7 @@ void td_thread_wrapper::setup_end_epoch() {
 }
 
 void td_thread_wrapper::setup_end_epoch_with_value(uintmax_t val) {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   local_finish_value += val;
   if (nthreads_in_epoch.fetch_add(-1) == 1) {
     td->setup_end_epoch_with_value(local_finish_value);
@@ -95,12 +95,12 @@ void td_thread_wrapper::setup_end_epoch_with_value(uintmax_t val) {
 
 void td_thread_wrapper::handle_termination_message(termination_message msg) {
   // fprintf(stderr, "thread_wrapper handle_termination_message\n");
-  BOOST_ASSERT (msg_queues.size() == (size_t)nthreads_total);
-  BOOST_ASSERT (nthreads_in_epoch.load() == 0);
-  BOOST_ASSERT (msg.is_last_thread());
+  assert (msg_queues.size() == (size_t)nthreads_total);
+  assert (nthreads_in_epoch.load() == 0);
+  assert (msg.is_last_thread());
   currently_in_epoch.store(0);
   for (int i = 0; i < nthreads_total; ++i) {
-    BOOST_ASSERT (msg_queues[i]);
+    assert (msg_queues[i]);
     // fprintf(stderr, "Sending termination to %p\n", msg_queues[i]);
     msg_queues[i]->send(termination_message(msg.get_combined_value(), (i == nthreads_total - 1)));
   }
@@ -117,7 +117,7 @@ bool td_thread_wrapper::really_ending_epoch() const {
 }
 
 void td_thread_wrapper::set_nthreads(size_t n) {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   nthreads_total = (int)n;
   thread_id_counter.store(0);
   msg_queues.resize(n);
@@ -125,7 +125,7 @@ void td_thread_wrapper::set_nthreads(size_t n) {
 }
 
 size_t td_thread_wrapper::get_nthreads() const {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   return nthreads_total;
 }
 

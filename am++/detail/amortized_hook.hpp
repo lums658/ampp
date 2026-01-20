@@ -121,7 +121,7 @@ class static_amortized_hook {
   static amortized_hook& get() {
     amortized_hook * tmp = instance_.load(boost::memory_order_consume);
     if (!tmp) {
-      boost::mutex::scoped_lock l(instantiation_mutex);
+      std::mutex::scoped_lock l(instantiation_mutex);
       tmp=instance_.load(boost::memory_order_consume);
       if (!tmp) {
         tmp=new amortized_hook;
@@ -133,7 +133,7 @@ class static_amortized_hook {
 
   private:
   static amplusplus::detail::atomic<amortized_hook*> instance_;
-  static boost::mutex instantiation_mutex;
+  static std::mutex instantiation_mutex;
 };
 
   }

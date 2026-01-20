@@ -40,32 +40,32 @@ namespace amplusplus {
 
 template <typename HandlerBase, typename HandlerGen>
 class signal_base {
-  boost::shared_ptr<std::vector<boost::shared_ptr<HandlerBase> > > sig;
+  std::shared_ptr<std::vector<std::shared_ptr<HandlerBase> > > sig;
 
   public:
-  signal_base(): sig(boost::make_shared<std::vector<boost::shared_ptr<HandlerBase> > >()) {}
+  signal_base(): sig(std::make_shared<std::vector<std::shared_ptr<HandlerBase> > >()) {}
 
   template <typename F>
   void* attach(const F& f) {
-    boost::shared_ptr<HandlerBase> sp(new typename HandlerGen::template type<F>(f));
-    boost::shared_ptr<std::vector<boost::shared_ptr<HandlerBase> > > new_p(boost::make_shared<std::vector<boost::shared_ptr<HandlerBase> > >(*sig));
+    std::shared_ptr<HandlerBase> sp(new typename HandlerGen::template type<F>(f));
+    std::shared_ptr<std::vector<std::shared_ptr<HandlerBase> > > new_p(std::make_shared<std::vector<std::shared_ptr<HandlerBase> > >(*sig));
     new_p->push_back(sp);
     sig.swap(new_p);
     return (void*)sp.get();
   }
 
   template <typename F>
-  void* attach(const boost::reference_wrapper<F>& f) {
-    boost::shared_ptr<HandlerBase> sp(new typename HandlerGen::template type<F&>(f));
-    boost::shared_ptr<std::vector<boost::shared_ptr<HandlerBase> > > new_p(boost::make_shared<std::vector<boost::shared_ptr<HandlerBase> > >(*sig));
+  void* attach(const std::reference_wrapper<F>& f) {
+    std::shared_ptr<HandlerBase> sp(new typename HandlerGen::template type<F&>(f));
+    std::shared_ptr<std::vector<std::shared_ptr<HandlerBase> > > new_p(std::make_shared<std::vector<std::shared_ptr<HandlerBase> > >(*sig));
     new_p->push_back(sp);
     sig.swap(new_p);
     return (void*)sp.get();
   }
 
   void detach(void* handle) {
-    boost::shared_ptr<std::vector<boost::shared_ptr<HandlerBase> > > new_p(boost::make_shared<std::vector<boost::shared_ptr<HandlerBase> > >(*sig));
-    for (typename std::vector<boost::shared_ptr<HandlerBase> >::iterator
+    std::shared_ptr<std::vector<std::shared_ptr<HandlerBase> > > new_p(std::make_shared<std::vector<std::shared_ptr<HandlerBase> > >(*sig));
+    for (typename std::vector<std::shared_ptr<HandlerBase> >::iterator
            i = new_p->begin(); i != new_p->end(); ++i) {
       if ((void*)(i->get()) == handle) {
         new_p->erase(i);
@@ -73,15 +73,15 @@ class signal_base {
         return;
       }
     }
-    BOOST_ASSERT (!"Detach of handle that was not found");
+    assert (!"Detach of handle that was not found");
   }
 
   protected:
   template <typename Func>
   void call(const Func& func) const {
-    boost::shared_ptr<std::vector<boost::shared_ptr<HandlerBase> > > sig_copy(sig);
-    std::vector<boost::shared_ptr<HandlerBase> >& v(*sig_copy);
-    for (typename std::vector<boost::shared_ptr<HandlerBase> >::iterator
+    std::shared_ptr<std::vector<std::shared_ptr<HandlerBase> > > sig_copy(sig);
+    std::vector<std::shared_ptr<HandlerBase> >& v(*sig_copy);
+    for (typename std::vector<std::shared_ptr<HandlerBase> >::iterator
            i = v.begin(); i != v.end(); ++i) {
       func(**i);
     }
@@ -141,7 +141,7 @@ class signal1: detail::signal_base<detail::signal1_handler_base<Arg>, detail::si
   using base_type::attach;
   using base_type::detach;
   void operator()(const Arg& a) {
-    base_type::call(boost::bind(boost::apply<void>(), _1, boost::cref(a)));
+    base_type::call(boost::bind(boost::apply<void>(), _1, std::cref(a)));
   }
 };
 

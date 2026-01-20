@@ -63,14 +63,14 @@ class termination_detector_base {
   virtual void message_send_starting(size_t dest, size_t msg_type) = 0;
   virtual void message_sent(size_t dest, size_t msg_type) = 0;
   virtual void set_nthreads(size_t n = 1) {
-    BOOST_ASSERT (n == 1);
+    assert (n == 1);
     (void)n;
   }
   virtual size_t get_nthreads() const {return 1;}
   virtual ~termination_detector_base() {}
 };
 
-typedef boost::shared_ptr<termination_detector_base> termination_detector;
+typedef std::shared_ptr<termination_detector_base> termination_detector;
 
 namespace detail {
 class td_thread_wrapper: public amplusplus::termination_detector_base {
@@ -92,7 +92,7 @@ class td_thread_wrapper: public amplusplus::termination_detector_base {
 
   void increase_activity_count(unsigned long v) {
     if (v == 0) return;
-    BOOST_ASSERT (thread_data_ptr.get());
+    assert (thread_data_ptr.get());
     unsigned long long& ac = thread_data_ptr->activity_count;
     unsigned long long old_val = ac;
     ac += v;
@@ -102,9 +102,9 @@ class td_thread_wrapper: public amplusplus::termination_detector_base {
 
   void decrease_activity_count(unsigned long v) {
     if (v == 0) return;
-    BOOST_ASSERT (thread_data_ptr.get());
+    assert (thread_data_ptr.get());
     unsigned long long& ac = thread_data_ptr->activity_count;
-    BOOST_ASSERT (v <= ac);
+    assert (v <= ac);
     ac -= v;
     //std::clog << (boost::format("%x decrease_activity_count(%d) from %d to %d\n") % this % v % (ac + v) % ac).str() << std::flush;
     if (ac == 0) {if (nthreads_active.fetch_add(-1) == 1) td->decrease_activity_count(1);}
@@ -126,7 +126,7 @@ class td_thread_wrapper: public amplusplus::termination_detector_base {
   // nthreads..2*nthreads-1 = waiting for everyone to leave epoch,
   // 2*nthreads = waiting for remote ranks to finish
   // 2*nthreads+1..3*nthreads = waiting for all local threads to know about termination
-  boost::shared_ptr<detail::barrier> begin_epoch_barrier;
+  std::shared_ptr<detail::barrier> begin_epoch_barrier;
   detail::atomic<int> nthreads_active;
   detail::atomic<int> nthreads_in_epoch;
   int nthreads_total;

@@ -264,7 +264,7 @@ class append_buffer {
 
   size_t push_back_empty() { // Push back a default-constructed object
     size_t idx = current_size.fetch_add(1);
-    BOOST_ASSERT (idx < max_capacity);
+    assert (idx < max_capacity);
     size_t chunk_num = pos_to_chunk_num(idx);
     size_t offs = chunk_offset(chunk_num);
     size_t sz = chunk_size(chunk_num);
@@ -272,7 +272,7 @@ class append_buffer {
     if (idx == offs) { // I need to allocate this chunk
       T* this_chunk = new T[sz];
       T* old_chunk = ptr.exchange(this_chunk);
-      BOOST_ASSERT (!old_chunk);
+      assert (!old_chunk);
       return idx;
     } else { // Wait for the chunk to be allocated by someone else, then store into it
       T* chunk_start = 0;

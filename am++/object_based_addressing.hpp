@@ -112,8 +112,8 @@ namespace amplusplus {
 			    const SentPartMap& sent_part_ = SentPartMap())
       : base_type(coalescing_layer_gen_,
                   trans,
-                  boost::make_shared<detail::all_ranks>(trans.size()) /* possible_dests */ ,
-                  boost::make_shared<detail::all_ranks>(trans.size()) /* possible_sources */,
+                  std::make_shared<detail::all_ranks>(trans.size()) /* possible_dests */ ,
+                  std::make_shared<detail::all_ranks>(trans.size()) /* possible_sources */,
                   bufsrter
                   /*Buffer sorter goes here */),
         initialized(true), owner(owner_), sent_part(sent_part_), my_rank(trans.rank()), num_ranks(trans.size())
@@ -128,8 +128,8 @@ namespace amplusplus {
       : base_type(
           coalescing_layer_gen_,
           trans,
-          boost::make_shared<detail::all_ranks_except_me>(trans.rank(), trans.size()) /* possible_dests */ ,
-          boost::make_shared<detail::all_ranks_except_me>(trans.rank(), trans.size()) /* possible_sources */,
+          std::make_shared<detail::all_ranks_except_me>(trans.rank(), trans.size()) /* possible_dests */ ,
+          std::make_shared<detail::all_ranks_except_me>(trans.rank(), trans.size()) /* possible_sources */,
           bufsrter),
         initialized(true), owner(owner_), sent_part(sent_part_), my_rank(trans.rank()), num_ranks(trans.size())
     {
@@ -161,25 +161,25 @@ namespace amplusplus {
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void set_handler(handler_type&& handler_) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       base_type::set_handler(detail::oba_handler<Handler>(std::move(handler_)));
     }
 #endif
 
     void set_handler(const handler_type& handler_) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       base_type::set_handler(detail::oba_handler<Handler>(handler_));
     }
 
     const handler_type& get_handler() {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       return base_type::get_handler().get_handler();
     }
 
     void send(const Arg& arg) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       rank_type dest = get(owner, arg);
-      BOOST_ASSERT (dest < num_ranks);
+      assert (dest < num_ranks);
 #ifdef DISABLE_SELF_SEND_CHECK
       send_base_type::send(get(sent_part, arg), dest);
 #else
@@ -192,9 +192,9 @@ namespace amplusplus {
     }
 
     void send_with_tid(const Arg& arg, int tid) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       rank_type dest = get(owner, arg);
-      BOOST_ASSERT (dest < num_ranks);
+      assert (dest < num_ranks);
 #ifdef DISABLE_SELF_SEND_CHECK
       send_base_type::send_with_tid(get(sent_part, arg), dest, tid);
 #else
@@ -276,26 +276,26 @@ namespace amplusplus {
     }
 
     void set_handler(const handler_type& handler_) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       base_type::set_handler(base_handler_type(*this, handler_));
     }
 
 #ifndef BOOST_NO_RVALUE_REFERENCES
     void set_handler(handler_type&& handler_) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       base_type::set_handler(base_handler_type(*this, std::move(handler_)));
     }
 #endif
 
     handler_type& get_handler() {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
       return base_type::get_handler().handler;
     }
 
     transport get_transport() const {return base_type::get_transport();}
 
     void send(const Arg& arg) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
 #ifdef DISABLE_SELF_SEND_CHECK
       transport::rank_type o = get(base_type::owner, arg);
       transport::rank_type nx = this->routing.next_hop(o);
@@ -307,7 +307,7 @@ namespace amplusplus {
     }
 
     void send_with_tid(const Arg& arg, int tid) {
-      BOOST_ASSERT (initialized);
+      assert (initialized);
 #ifdef DISABLE_SELF_SEND_CHECK
       transport::rank_type o = get(base_type::owner, arg);
       transport::rank_type nx = this->routing.next_hop(o);
@@ -334,16 +334,16 @@ struct no_routing {
   transport::rank_type next_hop(transport::rank_type i) const {return i;}
   valid_rank_set get_possible_dests() const {
 #ifdef DISABLE_SELF_SEND_CHECK
-    return boost::make_shared<amplusplus::detail::all_ranks>(sz);
+    return std::make_shared<amplusplus::detail::all_ranks>(sz);
 #else
-    return boost::make_shared<amplusplus::detail::all_ranks_except_me>(my_rank, sz);
+    return std::make_shared<amplusplus::detail::all_ranks_except_me>(my_rank, sz);
 #endif
   }
   valid_rank_set get_possible_sources() const {
 #ifdef DISABLE_SELF_SEND_CHECK
-    return boost::make_shared<amplusplus::detail::all_ranks>(sz);
+    return std::make_shared<amplusplus::detail::all_ranks>(sz);
 #else
-    return boost::make_shared<amplusplus::detail::all_ranks_except_me>(my_rank, sz);
+    return std::make_shared<amplusplus::detail::all_ranks_except_me>(my_rank, sz);
 #endif
   }
 };
@@ -361,20 +361,20 @@ struct ring_routing {
     ring_possible_dests(transport::rank_type my_rank, transport::rank_type sz): my_rank(my_rank), sz(sz) {}
     bool is_valid(transport::rank_type rank) const {return rank == (my_rank + 1) % sz;}
     transport::rank_type count() const {return 1;}
-    transport::rank_type rank_from_index(transport::rank_type i) const {BOOST_ASSERT (i == 0); (void)i; return (my_rank + 1) % sz;}
+    transport::rank_type rank_from_index(transport::rank_type i) const {assert (i == 0); (void)i; return (my_rank + 1) % sz;}
   };
   struct ring_possible_sources: valid_rank_set_base {
     transport::rank_type my_rank, sz;
     ring_possible_sources(transport::rank_type my_rank, transport::rank_type sz): my_rank(my_rank), sz(sz) {}
     bool is_valid(transport::rank_type rank) const {return rank == (my_rank + sz - 1) % sz;}
     transport::rank_type count() const {return 1;}
-    transport::rank_type rank_from_index(transport::rank_type i) const {BOOST_ASSERT (i == 0); (void)i; return (my_rank + sz - 1) % sz;}
+    transport::rank_type rank_from_index(transport::rank_type i) const {assert (i == 0); (void)i; return (my_rank + sz - 1) % sz;}
   };
   valid_rank_set get_possible_dests() const {
-    return boost::make_shared<ring_possible_dests>(my_rank, sz);
+    return std::make_shared<ring_possible_dests>(my_rank, sz);
   }
   valid_rank_set get_possible_sources() const {
-    return boost::make_shared<ring_possible_sources>(my_rank, sz);
+    return std::make_shared<ring_possible_sources>(my_rank, sz);
   }
 };
 
@@ -407,7 +407,7 @@ struct hypercube_routing {
     transport::rank_type count() const {return lg_sz;}
     transport::rank_type rank_from_index(transport::rank_type i) const {return my_rank ^ (transport::rank_type(1) << i);}
   };
-  valid_rank_set get_possible_dests() const {return boost::make_shared<hypercube_possible_dests>(my_rank, sz, lg_sz);}
+  valid_rank_set get_possible_dests() const {return std::make_shared<hypercube_possible_dests>(my_rank, sz, lg_sz);}
   valid_rank_set get_possible_sources() const {
     return this->get_possible_dests(); // Symmetric
   }
@@ -444,8 +444,8 @@ struct dissemination_routing {
     transport::rank_type count() const {return lg_sz;}
     transport::rank_type rank_from_index(transport::rank_type i) const {return (my_rank + sz - (transport::rank_type(1) << i)) % sz;}
   };
-  valid_rank_set get_possible_dests() const {return boost::make_shared<dissemination_possible_dests>(my_rank, sz, lg_sz);}
-  valid_rank_set get_possible_sources() const {return boost::make_shared<dissemination_possible_sources>(my_rank, sz, lg_sz);}
+  valid_rank_set get_possible_dests() const {return std::make_shared<dissemination_possible_dests>(my_rank, sz, lg_sz);}
+  valid_rank_set get_possible_sources() const {return std::make_shared<dissemination_possible_sources>(my_rank, sz, lg_sz);}
 };
 
 struct rook_routing {
@@ -464,7 +464,7 @@ struct rook_routing {
     }
   }
   transport::rank_type next_hop(transport::rank_type i) const {
-    BOOST_ASSERT (sz != 0);
+    assert (sz != 0);
     if (i / side1 == my_rank / side1) {
       return i;
     } else {
@@ -488,8 +488,8 @@ struct rook_routing {
     }
   };
   valid_rank_set get_possible_dests() const {
-    BOOST_ASSERT (sz != 0);
-    return boost::make_shared<rook_possible_dests>(my_rank, side1, side2);
+    assert (sz != 0);
+    return std::make_shared<rook_possible_dests>(my_rank, side1, side2);
   }
   valid_rank_set get_possible_sources() const {
     return this->get_possible_dests(); // Symmetric

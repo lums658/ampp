@@ -42,7 +42,7 @@ namespace amplusplus {
     extern boost::recursive_mutex mpi_lock;
 
     struct mpi_lock_guard_for_if {
-      boost::lock_guard<boost::recursive_mutex> x;
+      std::lock_guard<boost::recursive_mutex> x;
       mpi_lock_guard_for_if(int): x(mpi_lock) {}
       mpi_lock_guard_for_if(const mpi_lock_guard_for_if&): x(mpi_lock) {}
       operator bool() const {return false;}

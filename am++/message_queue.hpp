@@ -103,13 +103,13 @@ class scheduler: boost::noncopyable {
   scheduler() {}
   ~scheduler() {
     this->run_until(boost::bind(&run_queue_type::empty, &run_queue));
-    BOOST_ASSERT (run_queue.empty());
+    assert (run_queue.empty());
     // idle_tasks.clear_and_dispose(delete_task());
   }
 
   template <typename F, int priority = 0>
   void add_runnable(F f) {
-    boost::lock_guard<amplusplus::detail::mutex> l(lock);
+    std::lock_guard<amplusplus::detail::mutex> l(lock);
 #ifdef AMPLUSPLUS_USE_STD_LIST
     if(priority == 0)
       run_queue.push_back(new task_impl<F>(AMPLUSPLUS_MOVE(f)));
@@ -130,7 +130,7 @@ class scheduler: boost::noncopyable {
 
   template <typename F>
   void add_idle_task(F f) {
-    boost::lock_guard<amplusplus::detail::mutex> l(lock);
+    std::lock_guard<amplusplus::detail::mutex> l(lock);
     // idle_tasks.push_back(*new task_impl<F>(f));
     task t = new task_impl<F>(AMPLUSPLUS_MOVE(f));
 #ifdef AMPLUSPLUS_USE_STD_LIST
@@ -145,7 +145,7 @@ class scheduler: boost::noncopyable {
     bool any_busy = false;
     task t = 0;
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(lock);
+      std::lock_guard<amplusplus::detail::mutex> l(lock);
       if (q.empty()) {
         // fprintf(stderr, "No task found for %p\n", (void*)pthread_self());
         return false;
@@ -167,9 +167,9 @@ class scheduler: boost::noncopyable {
       case tr_busy: any_busy = true; // Fall through
       case tr_idle:
 #ifdef AMPLUSPLUS_USE_STD_LIST
-        {boost::lock_guard<amplusplus::detail::mutex> l(lock); q.push_back(t);}
+        {std::lock_guard<amplusplus::detail::mutex> l(lock); q.push_back(t);}
 #else
-        {boost::lock_guard<amplusplus::detail::mutex> l(lock); q.push_back(*t);}
+        {std::lock_guard<amplusplus::detail::mutex> l(lock); q.push_back(*t);}
 #endif
         break;
       default: abort();
@@ -227,15 +227,15 @@ template <typename Val>
 class message_queue: boost::noncopyable {
   amplusplus::detail::mutex lock;
   std::list<Val> messages;
-  std::list<boost::function<void(Val)> > receivers_waiting;
+  std::list<std::function<void(Val)> > receivers_waiting;
   bool receive_all_active;
-  boost::shared_ptr<bool> alive;
+  std::shared_ptr<bool> alive;
 
   public:
   message_queue(scheduler&): lock(), messages(), receivers_waiting(), receive_all_active(false), alive(new bool(true)) {}
   ~message_queue() {
     // fprintf(stderr, "message_queue::~message_queue %p\n", this);
-    BOOST_ASSERT (messages.empty());
+    assert (messages.empty());
     *alive = false;
     // Might have receivers waiting because of resubmits from things like queue copies
   }
@@ -246,11 +246,11 @@ class message_queue: boost::noncopyable {
 
   void send(Val msg) {
     // fprintf(stderr, "%p getting send in %p\n", this, (void*)pthread_self());
-    boost::function<void(Val)> k;
+    std::function<void(Val)> k;
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(lock);
+      std::lock_guard<amplusplus::detail::mutex> l(lock);
       if (!receivers_waiting.empty()) {
-        BOOST_ASSERT (messages.empty());
+        assert (messages.empty());
         // fprintf(stderr, "%p have receiver, pushing task in %p\n", this, (void*)pthread_self());
         if (receive_all_active && receivers_waiting.size() == 1) {
           k = receivers_waiting.front();
@@ -273,12 +273,12 @@ class message_queue: boost::noncopyable {
   void send_range(Iter b, Iter e) {
     // fprintf(stderr, "%p getting send in %p\n", this, (void*)pthread_self());
     while (b != e) {
-      boost::function<void(Val)> k;
+      std::function<void(Val)> k;
       bool process_rest = false;
       {
-        boost::lock_guard<amplusplus::detail::mutex> l(lock);
+        std::lock_guard<amplusplus::detail::mutex> l(lock);
         if (!receivers_waiting.empty()) {
-          BOOST_ASSERT (messages.empty());
+          assert (messages.empty());
           // fprintf(stderr, "%p have receiver, pushing task in %p\n", this, (void*)pthread_self());
           if (receive_all_active && receivers_waiting.size() == 1) {
             k = receivers_waiting.front();
@@ -308,14 +308,14 @@ class message_queue: boost::noncopyable {
 
   template <typename K>
   void receive(K k) {
-    BOOST_ASSERT (!receive_all_active);
+    assert (!receive_all_active);
     // fprintf(stderr, "%p getting receive in %p\n", this, (void*)pthread_self());
     boost::optional<Val> msg;
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(lock);
+      std::lock_guard<amplusplus::detail::mutex> l(lock);
       if (!messages.empty()) {
         // fprintf(stderr, "%p have message, pushing task in %p\n", this, (void*)pthread_self());
-        BOOST_ASSERT (receivers_waiting.empty());
+        assert (receivers_waiting.empty());
         msg = AMPLUSPLUS_MOVE(messages.front());
         messages.pop_front();
         goto outside_lock;
@@ -331,10 +331,10 @@ class message_queue: boost::noncopyable {
 
   template <typename K>
   void receive_all(K k) {
-    BOOST_ASSERT (!receive_all_active);
+    assert (!receive_all_active);
     std::list<Val> messages_to_process;
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(lock);
+      std::lock_guard<amplusplus::detail::mutex> l(lock);
       messages_to_process.swap(messages);
     }
     for (typename std::list<Val>::const_iterator i = messages_to_process.begin();
@@ -342,23 +342,23 @@ class message_queue: boost::noncopyable {
       k(*i);
     }
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(lock);
+      std::lock_guard<amplusplus::detail::mutex> l(lock);
       receivers_waiting.push_back(AMPLUSPLUS_MOVE(k));
       receive_all_active = true;
     }
   }
 
-  boost::shared_ptr<bool> get_alive() const {return alive;}
+  std::shared_ptr<bool> get_alive() const {return alive;}
 };
 
 template <typename Val>
 class receive_only {
   message_queue<Val>& mq;
-  boost::shared_ptr<bool> alive;
+  std::shared_ptr<bool> alive;
 
   public:
   receive_only(message_queue<Val>& mq): mq(mq), alive(mq.get_alive()) {}
-  boost::shared_ptr<bool> get_alive() const {return alive;}
+  std::shared_ptr<bool> get_alive() const {return alive;}
   template <typename F>
   void receive(F continuation) {mq.receive(AMPLUSPLUS_MOVE(continuation));}
   template <typename F>
@@ -373,12 +373,12 @@ void receive_all(receive_only<Val> from, F f) {
 
 template <typename Val>
 void copy_messages(receive_only<Val> from, message_queue<Val>& to) {
-  receive_all(from, boost::bind(&message_queue<Val>::send, boost::ref(to), _1));
+  receive_all(from, boost::bind(&message_queue<Val>::send, std::ref(to), _1));
 }
 
 template <typename Val, typename F>
-void transform_messages(receive_only<Val> from, F f, message_queue<typename boost::result_of<const F(Val)>::type>& to) {
-  receive_all(from, boost::bind(&message_queue<Val>::send, boost::ref(to), boost::bind(AMPLUSPLUS_MOVE(f), _1)));
+void transform_messages(receive_only<Val> from, F f, message_queue<typename std::result_of<const F(Val)>::type>& to) {
+  receive_all(from, boost::bind(&message_queue<Val>::send, std::ref(to), boost::bind(AMPLUSPLUS_MOVE(f), _1)));
 }
 
 }

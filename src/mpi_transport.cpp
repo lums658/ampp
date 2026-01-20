@@ -64,10 +64,10 @@ namespace detail {
   struct dcmf_progress_thread {
     // From http://lists.anl-external.org/pipermail/dcmf/2010-April/000588.html
     // with modifications suggested by Jeff Hammond
-    boost::shared_ptr<bool> alive;
-    explicit dcmf_progress_thread(boost::shared_ptr<bool> alive): alive(AMPLUSPLUS_MOVE(alive)) {}
+    std::shared_ptr<bool> alive;
+    explicit dcmf_progress_thread(std::shared_ptr<bool> alive): alive(AMPLUSPLUS_MOVE(alive)) {}
     void operator()() const {
-      BOOST_ASSERT (alive); // Only checks that pointer is valid
+      assert (alive); // Only checks that pointer is valid
       DCMF_CriticalSection_enter(0);
       while (*alive) {
         DCMF_Messager_advance();
@@ -81,7 +81,7 @@ namespace detail {
   };
 #endif
 
-  mpi_environment_obj::mpi_environment_obj(int argc, char ** argv, const bool need_threading, const unsigned int recv_depth, const unsigned int poll_tasks, const unsigned int flow_control_count): environment_base(), alive(boost::make_shared<bool>(true)),  recv_depth(recv_depth) , poll_tasks(poll_tasks), flow_control_count(flow_control_count) {
+  mpi_environment_obj::mpi_environment_obj(int argc, char ** argv, const bool need_threading, const unsigned int recv_depth, const unsigned int poll_tasks, const unsigned int flow_control_count): environment_base(), alive(std::make_shared<bool>(true)),  recv_depth(recv_depth) , poll_tasks(poll_tasks), flow_control_count(flow_control_count) {
     int flag;
     MPI_Initialized(&flag);
     need_to_finalize_mpi = (flag == 0); // Not initialized
@@ -153,7 +153,7 @@ namespace detail {
   }
 
   transport mpi_environment_obj::create_transport(environment& we) {
-    transport t(boost::make_shared<mpi_transport_event_driven>(boost::ref(we), MPI_COMM_WORLD, recv_depth,  poll_tasks, flow_control_count), we);
+    transport t(std::make_shared<mpi_transport_event_driven>(std::ref(we), MPI_COMM_WORLD, recv_depth,  poll_tasks, flow_control_count), we);
 #ifdef BLUE_GENE_P_EXTRAS
     t.set_termination_detector(make_mpi_sinha_kale_ramkumar_termination_detector_bgp(t));
 #else
@@ -168,7 +168,7 @@ namespace detail {
 }
 
 environment mpi_environment(int argc, char ** argv, const bool need_threading, const unsigned int recv_depth, const unsigned int poll_tasks, const unsigned int flow_control_count) {
-  return environment(boost::shared_ptr<detail::mpi_environment_obj>(new detail::mpi_environment_obj(argc, argv, need_threading, recv_depth, poll_tasks, flow_control_count)));
+  return environment(std::shared_ptr<detail::mpi_environment_obj>(new detail::mpi_environment_obj(argc, argv, need_threading, recv_depth, poll_tasks, flow_control_count)));
 }
 
 void detail::swap(scoped_mpi_comm_dup& a, scoped_mpi_comm_dup& b) {std::swap(a.comm, b.comm);}
@@ -190,13 +190,13 @@ void mpi_transport_event_driven::initialize() {
 void mpi_transport_event_driven::handle_mpi_completion(const detail::mpi_completion_message<detail::mpi_transport_request_info>& m) {
   const detail::mpi_transport_request_info& req_info = m.get_request_info_ref().user_info;
   if (req_info.req_kind == detail::mpi_transport_request_info::invalid_request) {
-    BOOST_ASSERT (!"Invalid MPI completion");
+    assert (!"Invalid MPI completion");
   } else if (req_info.req_kind == detail::mpi_transport_request_info::receive_request) {
     req_info.msg_type->handle_recv_completion(m);
   } else if (req_info.req_kind == detail::mpi_transport_request_info::send_request) {
     req_info.msg_type->handle_send_completion(m);
   } else {
-    BOOST_ASSERT (!"Invalid request kind");
+    assert (!"Invalid request kind");
     abort();
   }
 }
@@ -210,9 +210,9 @@ void mpi_transport_event_driven::handle_termination_event(termination_message va
     }
     // std::clog << (boost::format("%d mpi_transport_event_driven cleanup done\n") % boost::this_thread::get_id()).str() << std::flush;
   }
-  BOOST_ASSERT (end_epoch_barrier);
+  assert (end_epoch_barrier);
   end_epoch_barrier->wait();
-  BOOST_ASSERT (&tq);
+  assert (&tq);
   this->finish_end_epoch(); // May be overridden in subclasses
   tq.send(val);
 }
@@ -227,9 +227,9 @@ scheduler::task_result mpi_message_type::start_one_receive_task(transport::rank_
 }
 
 void mpi_message_type::start_one_receive(transport::rank_type source, size_t idx) {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
-  BOOST_ASSERT ((int)source == MPI_ANY_SOURCE || possible_sources->is_valid(source));
-  boost::shared_ptr<void> recvbuf = this->alloc_recv_buffer();
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  assert ((int)source == MPI_ANY_SOURCE || possible_sources->is_valid(source));
+  std::shared_ptr<void> recvbuf = this->alloc_recv_buffer();
   MPI_Request& request = this->receives[idx];
   // fprintf(stderr, "Irecv(%p) from %d tag %zu\n", recvbuf.get(), int(source), size_t(message_index));
   AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Irecv(recvbuf.get(), this->max_count, this->get_datatype(), source, message_index, trans.comms[trans.current_comm], &request); AMPLUSPLUS_MPI_CALL_REGION_END
@@ -238,7 +238,7 @@ void mpi_message_type::start_one_receive(transport::rank_type source, size_t idx
 }
 
 void mpi_message_type::start_receives(size_t recvdepth, bool use_any_source) {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   // std::clog << (boost::format("%d: start_receives(depth=%d, use_any_source=%d)\n") % boost::this_thread::get_id() % recvdepth % use_any_source).str() << std::flush;
   if (use_any_source) {
     this->receives.resize(recvdepth);
@@ -257,7 +257,7 @@ void mpi_message_type::start_receives(size_t recvdepth, bool use_any_source) {
 }
 
 void mpi_message_type::stop_receives(size_t /*recvdepth*/, bool /*use_any_source*/) {
-  boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+  std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
   for (size_t i = 0; i < this->receives.size(); ++i) {
     if (this->receives[i] != MPI_REQUEST_NULL) {
       // fprintf(stderr, "Canceling receive %p\n", (void*)(this->receives[i]));
@@ -277,11 +277,11 @@ namespace {
   };
 }
 
-void mpi_message_type::send_untyped(const void* buf, size_t count, transport::rank_type dest, boost::function<void()> buf_deleter) {
+void mpi_message_type::send_untyped(const void* buf, size_t count, transport::rank_type dest, std::function<void()> buf_deleter) {
   MPI_Datatype datatype = this->dt;
   int message_index = this->message_index;
   // fprintf(stderr, "send_untyped(%zu at %p to %zu comm %d tag %d)\n", count, buf, dest, int(trans.current_comm), int(message_index));
-  BOOST_ASSERT (possible_dests->is_valid(dest));
+  assert (possible_dests->is_valid(dest));
   this->trans.td->message_send_starting(dest, message_index);
   this->trans.sends_pending_per_dest[dest].fetch_add(1);
   MPI_Request req;
@@ -306,15 +306,15 @@ void mpi_message_type::handle_recv_completion(const detail::mpi_completion_messa
   if (flag) return;
 
   const mpi_request_info<detail::mpi_transport_request_info>& ri = m.get_request_info_ref();
-  boost::shared_ptr<void> buf(ri.user_info.recvbuf);
+  std::shared_ptr<void> buf(ri.user_info.recvbuf);
   {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
     this->receives[ri.user_info.receive_number] = MPI_REQUEST_NULL;
   }
-  BOOST_ASSERT (st.MPI_TAG == this->message_index);
+  assert (st.MPI_TAG == this->message_index);
   int count;
   AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Get_count((MPI_Status*)&st, this->get_datatype(), &count); AMPLUSPLUS_MPI_CALL_REGION_END
-  BOOST_ASSERT (possible_sources->is_valid(st.MPI_SOURCE));
+  assert (possible_sources->is_valid(st.MPI_SOURCE));
   // fprintf(stderr, "handle_recv_completion restarted for source %d tag %d\n", st.MPI_SOURCE, st.MPI_TAG);
   trans.td->message_received(st.MPI_SOURCE, st.MPI_TAG);
   ++trans.handler_calls_pending;
@@ -357,7 +357,7 @@ bool mpi_transport_event_driven::begin_epoch() {
   {
     bool first = td->begin_epoch();
     if (first) {
-      boost::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
+      std::lock_guard<amplusplus::detail::recursive_mutex> l(lock);
       current_comm = (current_comm + 1) % 3;
       size_t recvdepth = this->get_recvdepth();
       bool use_any_source = this->get_use_any_source();
@@ -367,10 +367,10 @@ bool mpi_transport_event_driven::begin_epoch() {
       }
     }
     // fprintf(stderr, "mpi_transport_event_driven waiting for termination on %p\n", td->get_termination_queue().debug_get_queue());
-    BOOST_ASSERT (begin_epoch_barrier);
+    assert (begin_epoch_barrier);
     begin_epoch_barrier->wait();
     td->get_termination_queue().receive( // For this thread only
-      delay(boost::bind(&mpi_transport_event_driven::handle_termination_event, this, _1, boost::ref(*term_queue)),
+      delay(boost::bind(&mpi_transport_event_driven::handle_termination_event, this, _1, std::ref(*term_queue)),
             env.get_scheduler()));
     return first;
   }

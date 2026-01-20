@@ -50,14 +50,14 @@ class term_detect_level_manager {
   size_t get() const {return current_td_level;}
 
   void insert(size_t l) {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> lock(my_lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> lock(my_lock);
     td_levels_requested.insert(l);
     update_td_level();
   }
 
   void erase(size_t l) {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> lock(my_lock);
-    BOOST_ASSERT (td_levels_requested.find(l) != td_levels_requested.end());
+    std::lock_guard<amplusplus::detail::recursive_mutex> lock(my_lock);
+    assert (td_levels_requested.find(l) != td_levels_requested.end());
     td_levels_requested.erase(td_levels_requested.find(l));
     update_td_level();
   }

@@ -27,21 +27,18 @@
 #define AMPLUSPLUS_REDUCTIONS_HPP
 
 #include <am++/traits.hpp>
-#include <boost/assert.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/utility.hpp>
-#include <boost/unordered_set.hpp>
-#include <boost/type_traits.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/serialization/static_warning.hpp>
-#include <boost/utility/result_of.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <cassert>
+#include <memory>
+#include <unordered_set>
+#include <type_traits>
+#include <boost/type_traits/function_traits.hpp>
 #include <boost/mpl/int.hpp>
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <utility>
 #include <algorithm>
+#include <functional>
 #include <am++/detail/thread_support.hpp>
 #include <am++/detail/signal.hpp>
 #include <am++/detail/factory_wrapper.hpp>
@@ -117,9 +114,9 @@ concept BinaryOpPolicy<typename P> {
 #endif
 
     template <size_t N>
-    struct is_power_of_2: boost::mpl::and_<boost::mpl::bool_<N % 2 == 0>, is_power_of_2<N / 2> > {};
+    struct is_power_of_2: std::conjunction<std::bool_constant<N % 2 == 0>, is_power_of_2<N / 2> > {};
     template <>
-    struct is_power_of_2<1>: boost::mpl::true_ {};
+    struct is_power_of_2<1>: std::true_type {};
   }
 
 template <typename CoalescingLayer, typename Policy>
@@ -201,11 +198,11 @@ private:
 #ifdef AMPLUSPLUS_PRINT_HIT_RATES
       counters.test(amplusplus::detail::get_thread_id());
 #endif
-    BOOST_ASSERT (this->get_transport().is_valid_rank(dest));
+    assert (this->get_transport().is_valid_rank(dest));
     stored_type new_val = policy.stored_value(arg);
     size_t key = policy.hash(new_val, this->get_size());
     amplusplus::detail::atomic<stored_type>* start_ptr = start_ptrs[dest];
-    BOOST_ASSERT (start_ptr);
+    assert (start_ptr);
     stored_type old_val = start_ptr[key].exchange(new_val);
     if (!policy.match(arg, old_val)) {
       CoalescingLayer::send(arg, dest);
@@ -218,11 +215,11 @@ private:
 
   void send_with_tid(const arg_type& arg, rank_type dest, int tid) {
     counters.test(tid);
-    BOOST_ASSERT (this->get_transport().is_valid_rank(dest));
+    assert (this->get_transport().is_valid_rank(dest));
     stored_type new_val = policy.stored_value(arg);
     size_t key = policy.hash(new_val, this->get_size());
     amplusplus::detail::atomic<stored_type>* start_ptr = start_ptrs[dest];
-    BOOST_ASSERT (start_ptr);
+    assert (start_ptr);
     stored_type old_val = start_ptr[key].exchange(new_val);
     if (!policy.match(arg, old_val)) {
       CoalescingLayer::send_with_tid(arg, dest, tid);
@@ -300,7 +297,7 @@ private:
                 &start_ptrs[this->num_threads * this->num_ranks],
                 (stored_type*)0);
       for (transport::rank_type i = 0; i < num_possible_dests * num_threads; ++i) {
-        BOOST_ASSERT (possible_dests->rank_from_index(i % num_possible_dests) < num_ranks);
+        assert (possible_dests->rank_from_index(i % num_possible_dests) < num_ranks);
         start_ptrs[(i / num_possible_dests) * num_ranks + possible_dests->rank_from_index(i % num_possible_dests)]
           = &cache[i * this->get_size()];
       }
@@ -314,20 +311,20 @@ private:
     for (size_t i = 0; i < num_threads * num_possible_dests * this->get_size(); ++i) {
       // Ensure this entry can never be found to avoid false positives
       cache[i] = policy.dummy_value(i % this->get_size(), this->get_size());
-      BOOST_ASSERT (policy.hash(cache[i], this->get_size()) != i % this->get_size());
+      assert (policy.hash(cache[i], this->get_size()) != i % this->get_size());
     }
   }
 
   void send_with_tid(const arg_type& arg, rank_type dest, const int thread_id) {
-    BOOST_ASSERT (thread_id >= 0 && thread_id < (int)num_threads);
+    assert (thread_id >= 0 && thread_id < (int)num_threads);
     counters.test(thread_id);
-    BOOST_ASSERT (this->get_transport().is_valid_rank(dest));
-    BOOST_ASSERT (dest < num_ranks);
+    assert (this->get_transport().is_valid_rank(dest));
+    assert (dest < num_ranks);
     stored_type new_val = policy.stored_value(arg);
     size_t h = policy.hash(new_val, this->get_size());
-    BOOST_ASSERT (h < this->get_size());
+    assert (h < this->get_size());
     stored_type* start_ptr = start_ptrs[(size_t)thread_id * num_ranks + dest];
-    BOOST_ASSERT (start_ptr);
+    assert (start_ptr);
     if (!policy.match(arg, start_ptr[h])) {
       start_ptr[h] = new_val;
       CoalescingLayer::send_with_tid(arg, dest, thread_id);
@@ -342,13 +339,13 @@ private:
 
   bool flush(transport::rank_type r) {
     const int thread_id = amplusplus::detail::get_thread_id();
-    BOOST_ASSERT (thread_id >= 0 && thread_id < (int)num_threads);
-    BOOST_ASSERT (r < num_ranks);
+    assert (thread_id >= 0 && thread_id < (int)num_threads);
+    assert (r < num_ranks);
     stored_type* start_ptr = start_ptrs[(size_t)thread_id * num_ranks + r];
     if (start_ptr != 0) { // Skip if not a valid destination
       for (size_t i = 0; i < this->get_size(); ++i) {
         start_ptr[i] = policy.dummy_value(i);
-        BOOST_ASSERT (policy.hash(start_ptr[i], this->get_size()) != i % this->get_size());
+        assert (policy.hash(start_ptr[i], this->get_size()) != i % this->get_size());
       }
     }
     return false;
@@ -398,9 +395,9 @@ class unordered_set_remove_duplicates {
 public:
   detail::hit_rate_counter counters;
 private:
-  typedef boost::unordered_set<stored_type, policy_hasher> uo_set_type;
+  typedef std::unordered_set<stored_type, policy_hasher> uo_set_type;
   std::vector<uo_set_type> cache; // One set for each destination, vector rather than scoped_array because our hasher is not default constructible
-  boost::scoped_array<boost::mutex> lock; // One for each destination
+  boost::scoped_array<std::mutex> lock; // One for each destination
 
   public:
   explicit unordered_set_remove_duplicates(
@@ -412,14 +409,14 @@ private:
         policy(gen.policy),
         counters(trans.get_nthreads()),
         cache(cl.get_transport().size(), uo_set_type(100, policy_hasher(this->policy))),
-        lock(AMPLUSPLUS_MULTITHREAD(new boost::mutex[cl.get_transport().size()]))
+        lock(AMPLUSPLUS_MULTITHREAD(new std::mutex[cl.get_transport().size()]))
     {clear();}
 
   void clear() {
     counters.clear();
     rank_type nranks = cl.get_transport().size();
     for (rank_type i = 0; i < nranks; ++i) {
-      AMPLUSPLUS_MULTITHREAD(boost::lock_guard<boost::mutex> l(lock[i]);)
+      AMPLUSPLUS_MULTITHREAD(std::lock_guard<std::mutex> l(lock[i]);)
       cache[i].clear();
     }
   }
@@ -428,9 +425,9 @@ private:
 #ifdef AMPLUSPLUS_PRINT_HIT_RATES
     counters.test(amplusplus::detail::get_thread_id());
 #endif
-    BOOST_ASSERT (cl.get_transport().is_valid_rank(dest));
+    assert (cl.get_transport().is_valid_rank(dest));
     stored_type new_val = policy.stored_value(arg);
-    AMPLUSPLUS_MULTITHREAD(boost::lock_guard<boost::mutex> l(lock[dest]);)
+    AMPLUSPLUS_MULTITHREAD(std::lock_guard<std::mutex> l(lock[dest]);)
     if (cache[dest].insert(new_val).second) { // If not present before, insert and return true
       cl.send(arg, dest);
       if (cache[dest].size() > 10000) cache[dest].clear();
@@ -443,9 +440,9 @@ private:
 
   void send_with_tid(const arg_type& arg, rank_type dest, int tid) {
     counters.test(tid);
-    BOOST_ASSERT (cl.get_transport().is_valid_rank(dest));
+    assert (cl.get_transport().is_valid_rank(dest));
     stored_type new_val = policy.stored_value(arg);
-    AMPLUSPLUS_MULTITHREAD(boost::lock_guard<boost::mutex> l(lock[dest]);)
+    AMPLUSPLUS_MULTITHREAD(std::lock_guard<std::mutex> l(lock[dest]);)
     if (cache[dest].insert(new_val).second) { // If not present before, insert and return true
       cl.send_with_tid(arg, dest, tid);
       if (cache[dest].size() > 10000) cache[dest].clear();
@@ -499,7 +496,7 @@ struct make_pair_t {
 template <typename T, typename = void> struct dummy_value;
 
 template <typename T>
-struct dummy_value<T, typename boost::enable_if<boost::is_integral<T> >::type> {
+struct dummy_value<T, typename std::enable_if<std::is_integral<T>::value>::type> {
   T operator()(size_t h) const {return T(h ^ 1);}
 };
 
@@ -513,8 +510,8 @@ class simple_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename boost::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename boost::result_of<GetValue(arg_type)>::type value_type;
+  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
+  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -524,7 +521,7 @@ class simple_cache_binop_reduction {
   GetKey get_key;
   GetValue get_value;
   MakeKeyval make_keyval;
-  boost::hash<key_type> hash_key;
+  std::hash<key_type> hash_key;
   unsigned int lg_size;
   boost::scoped_array<amplusplus::detail::atomic<arg_type> > values;
 
@@ -662,8 +659,8 @@ class locking_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename boost::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename boost::result_of<GetValue(arg_type)>::type value_type;
+  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
+  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -673,7 +670,7 @@ class locking_cache_binop_reduction {
   GetKey get_key;
   GetValue get_value;
   MakeKeyval make_keyval;
-  boost::hash<key_type> hash_key;
+  std::hash<key_type> hash_key;
   unsigned int lg_size;
   // boost::scoped_array<amplusplus::detail::atomic<int /* bool */> > spinlocks; // atomic<bool> broken on BG/P
   // boost::scoped_array<arg_type> values;
@@ -720,7 +717,7 @@ class locking_cache_binop_reduction {
     while (true) {
       int v = 0;
       if (l.compare_exchange_strong(v, 1)) return;
-      BOOST_ASSERT (v == 1);
+      assert (v == 1);
       amplusplus::detail::do_pause();
     }
   }
@@ -730,7 +727,7 @@ class locking_cache_binop_reduction {
     l.store(0);
 #else
     int old = l.exchange(0);
-    BOOST_ASSERT (old == 1);
+    assert (old == 1);
 #endif
   }
 
@@ -859,8 +856,8 @@ class per_thread_cache_binop_reduction {
   typedef typename message_type_traits<CoalescingLayer>::handler_type handler_type;
 
   private:
-  typedef typename boost::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename boost::result_of<GetValue(arg_type)>::type value_type;
+  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
+  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -870,7 +867,7 @@ class per_thread_cache_binop_reduction {
   GetKey get_key;
   GetValue get_value;
   MakeKeyval make_keyval;
-  boost::hash<key_type> hash_key;
+  std::hash<key_type> hash_key;
   unsigned int lg_size;
   valid_rank_set possible_dests;
   rank_type num_possible_dests;
@@ -904,7 +901,7 @@ class per_thread_cache_binop_reduction {
               (arg_type*)0);
     for (size_t tid = 0; tid < num_threads; ++tid) {
       for (rank_type i = 0; i < num_possible_dests; ++i) {
-        BOOST_ASSERT (possible_dests->rank_from_index(i) < num_ranks);
+        assert (possible_dests->rank_from_index(i) < num_ranks);
         start_ptrs[tid * num_ranks + possible_dests->rank_from_index(i)]
           = &values[(tid * num_possible_dests + i) * (size_t(1) << this->lg_size)];
       }
@@ -924,11 +921,11 @@ class per_thread_cache_binop_reduction {
   bool flush(rank_type dest) { // Clear while sending any valid data
     bool did_anything = false;
     const int thread_id = amplusplus::detail::get_thread_id();
-    BOOST_ASSERT (thread_id >= 0 && thread_id < num_threads);
-    BOOST_ASSERT (dest < num_ranks);
-    BOOST_ASSERT (start_ptrs[(size_t)thread_id * num_ranks + dest]);
-    BOOST_ASSERT (start_ptrs[(size_t)thread_id * num_ranks + dest] >= values.get() + (size_t)thread_id * num_possible_dests * this->get_size());
-    BOOST_ASSERT (start_ptrs[(size_t)thread_id * num_ranks + dest] < values.get() + (size_t)(thread_id + 1) * num_possible_dests * this->get_size());
+    assert (thread_id >= 0 && thread_id < num_threads);
+    assert (dest < num_ranks);
+    assert (start_ptrs[(size_t)thread_id * num_ranks + dest]);
+    assert (start_ptrs[(size_t)thread_id * num_ranks + dest] >= values.get() + (size_t)thread_id * num_possible_dests * this->get_size());
+    assert (start_ptrs[(size_t)thread_id * num_ranks + dest] < values.get() + (size_t)(thread_id + 1) * num_possible_dests * this->get_size());
     for (size_t h = 0; h < this->get_size(); ++h) {
       arg_type* ptr = start_ptrs[(size_t)thread_id * num_ranks + dest] + h;
       arg_type old_kv = *ptr;
@@ -949,13 +946,13 @@ class per_thread_cache_binop_reduction {
     key_type a_key = get_key(a);
     value_type a_value = get_value(a);
     counters.test(thread_id);
-    BOOST_ASSERT (thread_id >= 0 && thread_id < num_threads);
-    BOOST_ASSERT (dest < num_ranks);
-    BOOST_ASSERT (start_ptrs[thread_id * num_ranks + dest]);
-    BOOST_ASSERT (start_ptrs[(size_t)thread_id * num_ranks + dest] >= values.get() + (size_t)thread_id * num_possible_dests * this->get_size());
-    BOOST_ASSERT (start_ptrs[(size_t)thread_id * num_ranks + dest] < values.get() + (size_t)(thread_id + 1) * num_possible_dests * this->get_size());
+    assert (thread_id >= 0 && thread_id < num_threads);
+    assert (dest < num_ranks);
+    assert (start_ptrs[thread_id * num_ranks + dest]);
+    assert (start_ptrs[(size_t)thread_id * num_ranks + dest] >= values.get() + (size_t)thread_id * num_possible_dests * this->get_size());
+    assert (start_ptrs[(size_t)thread_id * num_ranks + dest] < values.get() + (size_t)(thread_id + 1) * num_possible_dests * this->get_size());
     size_t h = get_bucket(a_key);
-    BOOST_ASSERT (h < this->get_size());
+    assert (h < this->get_size());
     arg_type* ptr = start_ptrs[(size_t)thread_id * num_ranks + dest] + h;
     arg_type old_kv = *ptr;
     key_type old_key = get_key(old_kv);
@@ -1029,8 +1026,8 @@ class per_thread_wt_cache_binop_reduction {
   typedef Handler handler_type;
 
   private:
-  typedef typename boost::result_of<GetKey(arg_type)>::type key_type;
-  typedef typename boost::result_of<GetValue(arg_type)>::type value_type;
+  typedef typename std::result_of<GetKey(arg_type)>::type key_type;
+  typedef typename std::result_of<GetValue(arg_type)>::type value_type;
 
   typedef transport::rank_type rank_type;
 
@@ -1040,7 +1037,7 @@ class per_thread_wt_cache_binop_reduction {
   GetKey get_key;
   GetValue get_value;
   MakeKeyval make_keyval;
-  boost::hash<key_type> hash_key;
+  std::hash<key_type> hash_key;
   unsigned int lg_size;
   valid_rank_set possible_dests;
   rank_type num_possible_dests;
@@ -1074,7 +1071,7 @@ class per_thread_wt_cache_binop_reduction {
               (arg_type*)0);
     for (size_t tid = 0; tid < num_threads; ++tid) {
       for (rank_type i = 0; i < num_possible_dests; ++i) {
-        BOOST_ASSERT (possible_dests->rank_from_index(i) < num_ranks);
+        assert (possible_dests->rank_from_index(i) < num_ranks);
         start_ptrs[tid * num_ranks + possible_dests->rank_from_index(i)]
           = &values[(tid * num_possible_dests + i) * (size_t(1) << this->lg_size)];
       }
@@ -1088,7 +1085,7 @@ class per_thread_wt_cache_binop_reduction {
     counters.clear();
     for (size_t i = 0; i < num_threads * num_possible_dests * this->get_size(); ++i) {
       values[i] = make_keyval(get_dummy_value(i % this->get_size()), value_type());
-      BOOST_ASSERT (get_bucket(get_key(values[i])) != i % this->get_size());
+      assert (get_bucket(get_key(values[i])) != i % this->get_size());
     }
   }
 
@@ -1100,11 +1097,11 @@ class per_thread_wt_cache_binop_reduction {
     key_type a_key = get_key(a);
     value_type a_value = get_value(a);
     counters.test(thread_id);
-    BOOST_ASSERT (thread_id >= 0 && thread_id < (int)num_threads);
-    BOOST_ASSERT (dest < num_ranks);
-    BOOST_ASSERT (start_ptrs[thread_id * num_ranks + dest]);
+    assert (thread_id >= 0 && thread_id < (int)num_threads);
+    assert (dest < num_ranks);
+    assert (start_ptrs[thread_id * num_ranks + dest]);
     size_t h = get_bucket(a_key);
-    BOOST_ASSERT (h < this->get_size());
+    assert (h < this->get_size());
     arg_type* ptr = start_ptrs[thread_id * num_ranks + dest] + h;
     arg_type old_kv = *ptr;
     key_type old_key = get_key(old_kv);

@@ -167,13 +167,13 @@ namespace amplusplus {
     return idempotent_combination_t<Combine, Identity, GetKey, GetValue, MakeKeyval>(c, i, get_key, get_value, make_keyval);
   }
 
-  template <typename> struct is_valid_reduction: boost::mpl::false_ {};
-  template <> struct is_valid_reduction<no_reduction_t>: boost::mpl::true_ {};
-  template <typename Project, typename Policy> struct is_valid_reduction<duplicate_removal_t<Project, Policy> >: boost::mpl::true_ {};
+  template <typename> struct is_valid_reduction: std::false_type {};
+  template <> struct is_valid_reduction<no_reduction_t>: std::true_type {};
+  template <typename Project, typename Policy> struct is_valid_reduction<duplicate_removal_t<Project, Policy> >: std::true_type {};
   template <typename Combine, typename Identity, typename GetKey, typename GetValue, typename MakeKeyval>
-  struct is_valid_reduction<combination_t<Combine, Identity, GetKey, GetValue, MakeKeyval> >: boost::mpl::true_ {};
+  struct is_valid_reduction<combination_t<Combine, Identity, GetKey, GetValue, MakeKeyval> >: std::true_type {};
   template <typename Combine, typename Identity, typename GetKey, typename GetValue, typename MakeKeyval>
-  struct is_valid_reduction<idempotent_combination_t<Combine, Identity, GetKey, GetValue, MakeKeyval> >: boost::mpl::true_ {};
+  struct is_valid_reduction<idempotent_combination_t<Combine, Identity, GetKey, GetValue, MakeKeyval> >: std::true_type {};
 
   // Simpler interface
   template <typename ArgType, typename HandlerType, typename Gen, typename Owner, typename Reduction = no_reduction_t>
@@ -186,19 +186,19 @@ namespace amplusplus {
       struct type {
         Owner owner;
         message_type<Arg> mt;
-        boost::shared_ptr<Handler> h;
+        std::shared_ptr<Handler> h;
 
         type(const noncoalesced_generator&, transport trans, const Owner& owner, const Reduction& = no_reduction)
           : owner(owner), mt(trans.create_message_type<Arg>()), h()
         {
           mt.set_max_count(1);
-          mt.set_handler(boost::function<void (transport::rank_type, const Arg*, size_t)>(boost::ref(*this)));
+          mt.set_handler(std::function<void (transport::rank_type, const Arg*, size_t)>(std::ref(*this)));
         }
-        struct eat_sp {void operator()(const boost::shared_ptr<Arg>&) const {}};
+        struct eat_sp {void operator()(const std::shared_ptr<Arg>&) const {}};
         void send(const Arg& a) {
           transport::rank_type dest = get(owner, a);
           mt.message_being_built(dest);
-          boost::shared_ptr<Arg> buf(new Arg(a));
+          std::shared_ptr<Arg> buf(new Arg(a));
           mt.send(buf.get(), 1, dest, boost::bind<void>(eat_sp(), buf)); // Keep ownership of buf
         }
         void send_with_tid(const Arg& a, int /*tid*/) {
@@ -272,7 +272,7 @@ namespace amplusplus {
   template <typename F, typename Arg>
   struct duplicate_policy_from_projection {
     typedef Arg value_type;
-    typedef typename boost::result_of<F(Arg)>::type stored_type;
+    typedef typename std::result_of<F(Arg)>::type stored_type;
 
     private:
     F f;
@@ -287,7 +287,7 @@ namespace amplusplus {
       return f(d) == stored;
     }
     size_t hash(stored_type v, size_t size) const {
-      size_t key = boost::hash<stored_type>()(v);
+      size_t key = std::hash<stored_type>()(v);
       key ^= (key / size);
       key ^= (key / size / size);
       return key %= size;

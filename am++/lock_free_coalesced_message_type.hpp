@@ -85,7 +85,7 @@ class lock_free_coalesced_message_type {
     lock_free_coalesced_message_type& mt;
     flush_message_buffer(lock_free_coalesced_message_type& mt): mt(mt) {}
     void operator()(typename am_engine_traits<AMEngine>::rank_type dest) {
-      BOOST_ASSERT (is_valid_rank(mt.engine, dest));
+      assert (is_valid_rank(mt.engine, dest));
       if (mt.buffers_to_swap_in.get() == NULL) {
         mt.buffers_to_swap_in.reset(mt.alloc_buffer());
       }
@@ -124,7 +124,7 @@ class lock_free_coalesced_message_type {
   }
 
   friend void send(lock_free_coalesced_message_type& mt, const arg_type& arg, rank_type dest) {
-    BOOST_ASSERT (is_valid_rank(mt.engine, dest));
+    assert (is_valid_rank(mt.engine, dest));
     if (mt.buffers_to_swap_in.get() == NULL) {
       mt.buffers_to_swap_in.reset(mt.alloc_buffer());
     }
@@ -162,13 +162,13 @@ class lock_free_coalesced_message_type {
   typename am_engine_traits<AMEngine>::msg_index_type message_index;
   handler_type handler;
   scoped_raw_handler<AMEngine> handler_scope;
-  std::vector<boost::shared_ptr<void> > all_buffers; // Free and used, keeps ownership of them
+  std::vector<std::shared_ptr<void> > all_buffers; // Free and used, keeps ownership of them
   std::vector<message_buffer*> buffer_pool;
   std::vector<std::pair<message_buffer*, uintptr_t> > outgoing_buffers; // Pair is <buffer, count>
   boost::thread_specific_ptr<message_buffer> buffers_to_swap_in; // One per thread
 
   message_buffer* create_buffer() {
-    boost::shared_ptr<void> buf = alloc_memory(engine, sizeof(message_buffer));
+    std::shared_ptr<void> buf = alloc_memory(engine, sizeof(message_buffer));
     all_buffers.push_back(buf);
     message_buffer* result = (message_buffer*)buf.get();
     result->elements_written = 0;

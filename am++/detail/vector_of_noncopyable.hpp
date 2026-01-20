@@ -55,7 +55,7 @@ class vector_of_noncopyable {
   size_t size() const {return size_;}
   void push_back_empty() {
     if (size_ + 1 >= reserved_) increase_size(size_ + 1);
-    BOOST_ASSERT (size_ < reserved_);
+    assert (size_ < reserved_);
     ++size_;
   }
   void push_back_swap(T& t) {

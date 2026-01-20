@@ -109,15 +109,15 @@ namespace detail {
     BOOST_MPL_HAS_XXX_TRAIT_DEF(inherited);
 
     template <typename T>
-    struct is_actual_cons: public boost::mpl::false_ {};
+    struct is_actual_cons: public std::false_type {};
 
     template <typename Hd, typename Tl>
     struct is_actual_cons<boost::tuples::cons<Hd, Tl> >
-      : public boost::mpl::true_ {};
+      : public std::true_type {};
 
     template <typename T>
     struct inherited_is_cons {
-      typedef boost::mpl::bool_<is_actual_cons<typename T::inherited>::value> type;
+      typedef std::bool_constant<is_actual_cons<typename T::inherited>::value> type;
     };
 
     template <typename T>
@@ -125,7 +125,7 @@ namespace detail {
       : public boost::mpl::eval_if<
                  has_inherited<T>,
                  inherited_is_cons<T>,
-                 boost::mpl::false_>
+                 std::false_type>
       {};
 
     template <typename T>
@@ -142,8 +142,8 @@ namespace detail {
 
 template <typename T>
 struct make_mpi_datatype<T,
-                         typename boost::enable_if<
-                                    detail::is_boost_tuple<T>
+                         typename std::enable_if<
+                                    detail::is_boost_tuple<T>::value
                                   >::type>
        : make_mpi_datatype_base
 {
@@ -223,11 +223,11 @@ struct make_mpi_datatype<std::tuple<Elts...>> : make_mpi_datatype_base {
 };
 #endif
 
-extern detail::type_info_map<boost::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;
+extern detail::type_info_map<std::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;
 
 template <typename T>
 void register_mpi_datatype() {
-  mpi_datatype_map.insert(detail::get_type_info<T>(), boost::static_pointer_cast<make_mpi_datatype_base>(boost::make_shared<make_mpi_datatype<T> >()));
+  mpi_datatype_map.insert(detail::get_type_info<T>(), std::static_pointer_cast<make_mpi_datatype_base>(std::make_shared<make_mpi_datatype<T> >()));
 }
 
 MPI_Datatype get_mpi_datatype(const std::type_info& ti);

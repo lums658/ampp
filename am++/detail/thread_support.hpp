@@ -41,7 +41,7 @@ namespace amplusplus {
 
     class barrier {
       public:
-      barrier(unsigned int count) {(void)count; BOOST_ASSERT (count == 1);}
+      barrier(unsigned int count) {(void)count; assert (count == 1);}
       bool wait() {return true;}
     };
     inline void do_pause() {}
@@ -79,13 +79,13 @@ namespace amplusplus {
       }
 
       void unlock() {
-        BOOST_ASSERT (my_lock_count.get());
+        assert (my_lock_count.get());
         int& my_lock_count_data = *my_lock_count;
         if (--my_lock_count_data == 0) m.unlock();
       }
     };
 #endif
-    typedef boost::mutex mutex;
+    typedef std::mutex mutex;
     typedef boost::recursive_mutex recursive_mutex;
     typedef boost::barrier barrier;
 
@@ -139,26 +139,26 @@ using boost::atomic;
 #elif 1
 namespace amplusplus {namespace detail {
 
-template <typename T, typename = void> struct atomics_supported: boost::mpl::false_ {};
+template <typename T, typename = void> struct atomics_supported: std::false_type {};
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1
-template <typename T> struct atomics_supported<T, typename boost::enable_if_c<sizeof(T) == 1>::type>: boost::mpl::true_ {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 1>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2
-template <typename T> struct atomics_supported<T, typename boost::enable_if_c<sizeof(T) == 2>::type>: boost::mpl::true_ {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 2>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
-template <typename T> struct atomics_supported<T, typename boost::enable_if_c<sizeof(T) == 4>::type>: boost::mpl::true_ {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 4>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
-template <typename T> struct atomics_supported<T, typename boost::enable_if_c<sizeof(T) == 8>::type>: boost::mpl::true_ {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 8>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-template <typename T> struct atomics_supported<T, typename boost::enable_if_c<sizeof(T) == 16>::type>: boost::mpl::true_ {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 16>::type>: std::true_type {};
 #endif
 
 template <typename T>
@@ -200,19 +200,19 @@ class atomic {
 namespace amplusplus {namespace detail {
 template <typename T>
 class atomic: boost::noncopyable {
-  mutable boost::mutex lock;
+  mutable std::mutex lock;
   T value;
   public:
   atomic(T x = T()): lock(), value(x) {}
-  T load() const {boost::lock_guard<boost::mutex> l(lock); return value;}
-  void store(T x) {boost::lock_guard<boost::mutex> l(lock); value = x;}
+  T load() const {std::lock_guard<std::mutex> l(lock); return value;}
+  void store(T x) {std::lock_guard<std::mutex> l(lock); value = x;}
   T exchange(T x) {
-    boost::lock_guard<boost::mutex> l(lock);
+    std::lock_guard<std::mutex> l(lock);
     std::swap(value, x);
     return x;
   }
   bool compare_exchange_strong(T& old_value, T new_value) {
-    boost::lock_guard<boost::mutex> l(lock);
+    std::lock_guard<std::mutex> l(lock);
     if (value == old_value) {
       value = new_value;
       return true;
@@ -222,10 +222,10 @@ class atomic: boost::noncopyable {
     }
   }
   bool compare_exchange_weak(T& old_value, T new_value) {return compare_exchange_strong(old_value, new_value);}
-  T fetch_add(T x) {boost::lock_guard<boost::mutex> l(lock); T old_value = value; value += x; return old_value;}
+  T fetch_add(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value += x; return old_value;}
   T fetch_sub(T x) {return fetch_add(-x);}
-  T fetch_or(T x) {boost::lock_guard<boost::mutex> l(lock); T old_value = value; value |= x; return old_value;}
-  T fetch_and(T x) {boost::lock_guard<boost::mutex> l(lock); T old_value = value; value &= x; return old_value;}
+  T fetch_or(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value |= x; return old_value;}
+  T fetch_and(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value &= x; return old_value;}
   atomic& operator++() {fetch_add(1); return *this;}
   atomic& operator--() {fetch_add(-1); return *this;}
   atomic& operator+=(T x) {fetch_add(x); return *this;}
@@ -239,7 +239,7 @@ namespace amplusplus {
     extern __thread int internal_thread_id;
 
     static inline int get_thread_id() {
-      BOOST_ASSERT (internal_thread_id != -1); // Ensure that it has been set
+      assert (internal_thread_id != -1); // Ensure that it has been set
       return internal_thread_id;
     }
 

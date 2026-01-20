@@ -26,12 +26,11 @@
 #ifndef AMPLUSPLUS_HPP
 #define AMPLUSPLUS_HPP
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
-#include <boost/utility.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
+#include <memory>
+#include <thread>
+#include <mutex>
 #include <set>
 #include <functional>
 #include <am++/traits.hpp>

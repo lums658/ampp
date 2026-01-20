@@ -89,17 +89,17 @@ class mpi_request_manager: boost::noncopyable {
   int nreqs_active;
   message_queue<mpi_completion_message<UserInfo> > mpi_msg_queue;
   atomic<int> add_pending;
-  boost::shared_ptr<bool> need_to_exit;
+  std::shared_ptr<bool> need_to_exit;
   amplusplus::scheduler& sched;
 
   mutable amplusplus::detail::recursive_mutex req_queue_lock; // External so it can share an external MPI lock
 
-  scheduler::task_result poll_for_messages(scheduler& sched, boost::shared_ptr<bool> need_to_exit);
+  scheduler::task_result poll_for_messages(scheduler& sched, std::shared_ptr<bool> need_to_exit);
   scheduler::task_result poll_unlocked(boost::unique_lock<recursive_mutex>&);
 
   public:
   mpi_request_manager(scheduler& sched, int poll_tasks): nreqs_active(0), mpi_msg_queue(sched), need_to_exit(new bool(false)), sched(sched) {
-    BOOST_ASSERT(poll_tasks > 0);
+    assert(poll_tasks > 0);
     add_pending.store(0);
     for(int i = 0; i != poll_tasks; ++i)
       sched.add_runnable(boost::bind(&mpi_request_manager::poll_for_messages, this, _1, need_to_exit)); // Extra argument needed to force a copy
@@ -110,12 +110,12 @@ class mpi_request_manager: boost::noncopyable {
   receive_only<mpi_completion_message<UserInfo> > get_mpi_message_queue() {return mpi_msg_queue;}
 
   bool empty() const {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
     return nreqs_active == 0 && mpi_msg_queue.empty() && add_pending.load() == 0;
   }
 
   int size() const {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
     return nreqs_active;
   }
 
@@ -131,7 +131,7 @@ void mpi_request_manager<UserInfo>::add(MPI_Request req, mpi_request_info<UserIn
   // std::clog << (boost::format("%x add %d with %d\n") % uintptr_t(this) % uintptr_t(req) % info).str() << std::flush;
   ++add_pending;
   {
-    boost::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> lock(req_queue_lock);
     ++nreqs_active;
     --add_pending;
     for (size_t i = 0; i < reqs.size(); ++i) {
@@ -157,7 +157,7 @@ void mpi_request_manager<UserInfo>::add(MPI_Request req, mpi_request_info<UserIn
 }
 
 template <typename UserInfo>
-scheduler::task_result mpi_request_manager<UserInfo>::poll_for_messages(scheduler&, boost::shared_ptr<bool> need_to_exit) {
+scheduler::task_result mpi_request_manager<UserInfo>::poll_for_messages(scheduler&, std::shared_ptr<bool> need_to_exit) {
   // fprintf(stderr, "mpi_request_manager<%s, %p>::poll_for_messages trying to run\n", typeid(UserInfo).name(), this);
   if (*need_to_exit) {/* fprintf(stderr, "poll_for_messages %p removing itself from queue\n", this); */ return scheduler::tr_remove_from_queue;}
   if (add_pending.load() != 0) return scheduler::tr_idle; // Don't try to lock in competition with an add
@@ -189,18 +189,18 @@ mpi_request_manager<UserInfo>::poll_unlocked(boost::unique_lock<amplusplus::deta
   if (nreqs_active == 0) return scheduler::tr_idle;
   int outcount;
   if (!reqs.empty()) { // Avoid Open MPI failure when output arrays are NULL
-    BOOST_ASSERT (indices.size() >= reqs.size());
-    BOOST_ASSERT (statuses.size() >= reqs.size());
+    assert (indices.size() >= reqs.size());
+    assert (statuses.size() >= reqs.size());
     AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Testsome((int)reqs.size(), &reqs[0], &outcount, &indices[0], &statuses[0]); AMPLUSPLUS_MPI_CALL_REGION_END
     // fprintf(stderr, "MPI_Testsome returned %d\n", outcount);
   } else {
-    BOOST_ASSERT (this->nreqs_active == 0);
+    assert (this->nreqs_active == 0);
     return scheduler::tr_idle;
   }
   if (outcount == 0) {
     return scheduler::tr_idle;
   } else if (outcount == MPI_UNDEFINED) {
-    BOOST_ASSERT (this->nreqs_active == 0);
+    assert (this->nreqs_active == 0);
     return scheduler::tr_idle;
   }
   nreqs_active -= outcount;

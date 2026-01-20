@@ -70,15 +70,15 @@ class mpi_pool {
   public:
   mpi_pool(): pool(4096), lock() {}
 
-  boost::shared_ptr<unsigned char> alloc(size_t n) {
+  std::shared_ptr<unsigned char> alloc(size_t n) {
     size_t n_in_pages = (n + 4096 - 1) / 4096;
-    boost::lock_guard<amplusplus::detail::mutex> l(lock);
+    std::lock_guard<amplusplus::detail::mutex> l(lock);
     unsigned char* p = static_cast<unsigned char*>(pool.ordered_malloc(n_in_pages));
-    return boost::shared_ptr<unsigned char>(p, pool_array_deleter(*this, n_in_pages));
+    return std::shared_ptr<unsigned char>(p, pool_array_deleter(*this, n_in_pages));
   }
 
   void free(void* p, size_t sz) {
-    boost::lock_guard<amplusplus::detail::mutex> l(lock);
+    std::lock_guard<amplusplus::detail::mutex> l(lock);
     pool.ordered_free(p, sz);
   }
 };
@@ -94,7 +94,7 @@ struct array_deleter {
 
 class mpi_pool {
   public:
-  boost::shared_ptr<char> alloc(size_t n) {return boost::shared_ptr<char>(new char[n], boost::checked_array_deleter<char>());}
+  std::shared_ptr<char> alloc(size_t n) {return std::shared_ptr<char>(new char[n], boost::checked_array_deleter<char>());}
 };
 
   }

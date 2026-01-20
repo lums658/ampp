@@ -52,7 +52,7 @@ namespace amplusplus {
 namespace detail {
   template <typename T>
   inline uint64_t pack_pointer_and_size(T* p, unsigned int n) {
-    BOOST_ASSERT (((int64_t(p) << 16) >> 16) == intptr_t(p));
+    assert (((int64_t(p) << 16) >> 16) == intptr_t(p));
     return ((uint64_t)(uintptr_t)p << 16) | (n & 0xffffu);
   }
 
@@ -111,7 +111,7 @@ class lock_free_coalesced_message_type_packed {
     lock_free_coalesced_message_type_packed& mt;
     flush_message_buffer(lock_free_coalesced_message_type_packed& mt): mt(mt) {}
     void operator()(typename am_engine_traits<AMEngine>::rank_type dest) {
-      BOOST_ASSERT (is_valid_rank(mt.engine, dest));
+      assert (is_valid_rank(mt.engine, dest));
       if (mt.buffers_to_swap_in.get() == NULL) {
         mt.buffers_to_swap_in.reset(mt.alloc_buffer());
       }
@@ -149,7 +149,7 @@ class lock_free_coalesced_message_type_packed {
   }
 
   friend void send(lock_free_coalesced_message_type_packed& mt, const arg_type& arg, rank_type dest) {
-    BOOST_ASSERT (is_valid_rank(mt.engine, dest));
+    assert (is_valid_rank(mt.engine, dest));
     if (mt.buffers_to_swap_in.get() == NULL) {
       mt.buffers_to_swap_in.reset(mt.alloc_buffer());
     }
@@ -187,14 +187,14 @@ class lock_free_coalesced_message_type_packed {
   typename am_engine_traits<AMEngine>::msg_index_type message_index;
   handler_type handler;
   scoped_raw_handler<AMEngine> handler_scope;
-  std::vector<boost::shared_ptr<void> > all_buffers; // Free and used, keeps ownership of them
-  boost::mutex buffer_pool_lock;
+  std::vector<std::shared_ptr<void> > all_buffers; // Free and used, keeps ownership of them
+  std::mutex buffer_pool_lock;
   std::vector<message_buffer*> buffer_pool;
   std::vector<uint64_t> outgoing_buffers_packed; // Packed using functions in detail
   boost::thread_specific_ptr<message_buffer> buffers_to_swap_in; // One per thread
 
   message_buffer* create_buffer() {
-    boost::shared_ptr<void> buf = alloc_memory(engine, sizeof(message_buffer));
+    std::shared_ptr<void> buf = alloc_memory(engine, sizeof(message_buffer));
     all_buffers.push_back(buf);
     message_buffer* result = (message_buffer*)buf.get();
     result->elements_written = 0;
@@ -203,7 +203,7 @@ class lock_free_coalesced_message_type_packed {
 
   message_buffer* alloc_buffer() {
 #if 0
-    boost::lock_guard<boost::mutex> l(buffer_pool_lock);
+    std::lock_guard<std::mutex> l(buffer_pool_lock);
     if (buffer_pool.empty()) {
       return create_buffer();
     } else {
@@ -222,7 +222,7 @@ class lock_free_coalesced_message_type_packed {
     free_buffer(lock_free_coalesced_message_type_packed& mt, message_buffer* buf): mt(mt), buf(buf) {}
     void operator()(const MPI_Status&) const {
 #if 0
-      boost::lock_guard<boost::mutex> l(mt.buffer_pool_lock);
+      std::lock_guard<std::mutex> l(mt.buffer_pool_lock);
       mt.buffer_pool.push_back(buf);
 #endif
     }

@@ -78,11 +78,11 @@ class basic_coalesced_message_type
 
   struct message_buffer { // Not thread safe -- operations are locked by message type
     size_t count, max_count;
-    boost::shared_ptr<void> data_owner;
+    std::shared_ptr<void> data_owner;
     Arg* data;
     bool registered_with_td; // whether message_being_built has been called yet
 
-    message_buffer(boost::shared_ptr<void> data_owner, size_t max_count)
+    message_buffer(std::shared_ptr<void> data_owner, size_t max_count)
         : count(0),
           max_count(max_count),
           data_owner(data_owner),
@@ -102,7 +102,7 @@ class basic_coalesced_message_type
     }
 
     message_buffer_append_state append(const Arg& x) {
-      BOOST_ASSERT (count < max_count);
+      assert (count < max_count);
       int result = normal;
       if (count == 0) {
         result |= first_message;
@@ -113,7 +113,7 @@ class basic_coalesced_message_type
     }
 
     bool empty() const {
-      BOOST_ASSERT (count < max_count);
+      assert (count < max_count);
       return count == 0;
     }
 
@@ -155,15 +155,15 @@ class basic_coalesced_message_type
       lock(),
       buffer_sorter(buf_sorter)
   {
-    if (!possible_dests_) possible_dests_ = boost::make_shared<detail::all_ranks>(trans.size());
-    if (!possible_sources_) possible_sources_ = boost::make_shared<detail::all_ranks>(trans.size());
+    if (!possible_dests_) possible_dests_ = std::make_shared<detail::all_ranks>(trans.size());
+    if (!possible_sources_) possible_sources_ = std::make_shared<detail::all_ranks>(trans.size());
     this->mt.set_max_count(this->coalescing_size);
     this->mt.set_possible_dests(possible_dests_);
     this->mt.set_possible_sources(possible_sources_);
     typedef transport::rank_type rank_type;
     for (size_t i = 0; i < possible_dests_->count(); ++i) {
       rank_type r = possible_dests_->rank_from_index(i);
-      BOOST_ASSERT (r < trans.size());
+      assert (r < trans.size());
       outgoing_buffers[r] = alloc_buffer();
     }
   }
@@ -217,14 +217,14 @@ class basic_coalesced_message_type
 #endif
 
   handler_type& get_handler() {
-    BOOST_ASSERT (handler);
+    assert (handler);
     return *handler.get();
   }
 
   void send(const arg_type& arg, transport::rank_type dest) {
-    BOOST_ASSERT (trans.is_valid_rank(dest));
-    BOOST_ASSERT (this->mt.get_possible_dests()->is_valid(dest));
-    boost::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
+    assert (trans.is_valid_rank(dest));
+    assert (this->mt.get_possible_dests()->is_valid(dest));
+    std::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
     // std::cerr << "send " << dest << std::endl;
     message_buffer& buf_ref = outgoing_buffers[dest];
     message_buffer_append_state s = buf_ref.append(arg);
@@ -259,8 +259,8 @@ class basic_coalesced_message_type
   }
 
   void message_being_built(transport::rank_type dest) {
-    BOOST_ASSERT (trans.is_valid_rank(dest));
-    boost::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
+    assert (trans.is_valid_rank(dest));
+    std::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
     message_buffer& buf_ref = outgoing_buffers[dest];
     if (!buf_ref.registered_with_td) {
       buf_ref.registered_with_td = true;
@@ -269,9 +269,9 @@ class basic_coalesced_message_type
   }
 
   bool flush(transport::rank_type dest) {
-    BOOST_ASSERT (trans.is_valid_rank(dest));
+    assert (trans.is_valid_rank(dest));
     // std::cerr << "flush " << dest << std::endl;
-    boost::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
+    std::lock_guard<amplusplus::detail::recursive_mutex> my_lock(lock);
     message_buffer& buffer_to_send_ref = outgoing_buffers[dest];
     if (!buffer_to_send_ref.valid() || buffer_to_send_ref.empty()) return false;
     // std::cout << "flushing to " << dest << std::endl;
@@ -288,8 +288,8 @@ class basic_coalesced_message_type
   transport trans;
   message_type<Arg> mt;
 #if defined(BOOST_NO_CXX11_SMART_PTR) || BOOST_VERSION < 105000
-  boost::scoped_ptr<detail::buffer_cache> buf_cache;
-  boost::scoped_ptr<handler_type> handler;
+  std::unique_ptr<detail::buffer_cache> buf_cache;
+  std::unique_ptr<handler_type> handler;
 #else
   std::unique_ptr<detail::buffer_cache> buf_cache;
   std::unique_ptr<handler_type> handler;
@@ -300,7 +300,7 @@ class basic_coalesced_message_type
   BufferSorter buffer_sorter;
 
   message_buffer alloc_buffer() {
-    boost::shared_ptr<void> buf_owner = buf_cache->allocate();
+    std::shared_ptr<void> buf_owner = buf_cache->allocate();
     message_buffer buf(buf_owner, coalescing_size);
     return buf;
   }

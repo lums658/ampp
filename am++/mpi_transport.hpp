@@ -73,7 +73,7 @@ namespace detail {
 
   private:
     bool need_to_finalize_mpi;
-    boost::shared_ptr<bool> alive;
+    std::shared_ptr<bool> alive;
     unsigned int recv_depth;
     unsigned int poll_tasks;
     unsigned int flow_control_count;
@@ -112,11 +112,11 @@ namespace detail {
   struct mpi_transport_request_info {
     enum request_kind {invalid_request, send_request, receive_request} req_kind;
     mpi_message_type* msg_type;
-    boost::function<void()> send_deleter;
+    std::function<void()> send_deleter;
     size_t receive_number;
-    boost::shared_ptr<void> recvbuf;
+    std::shared_ptr<void> recvbuf;
 
-    static mpi_transport_request_info make_send_request(mpi_message_type* msg_type_, boost::function<void()> del_) {
+    static mpi_transport_request_info make_send_request(mpi_message_type* msg_type_, std::function<void()> del_) {
       mpi_transport_request_info r;
       r.req_kind = send_request;
       r.msg_type = msg_type_;
@@ -124,7 +124,7 @@ namespace detail {
       return r;
     }
 
-    static mpi_transport_request_info make_receive_request(mpi_message_type* msg_type_, size_t receive_number_, const boost::shared_ptr<void>& recvbuf_) {
+    static mpi_transport_request_info make_receive_request(mpi_message_type* msg_type_, size_t receive_number_, const std::shared_ptr<void>& recvbuf_) {
       mpi_transport_request_info r;
       r.req_kind = receive_request;
       r.msg_type = msg_type_;
@@ -159,7 +159,7 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
       end_epoch_barrier(new boost::barrier(1)),
       term_queue(), flow_control_count(flow_control_count)
   {
-    BOOST_ASSERT(flow_control_count > 0);
+    assert(flow_control_count > 0);
     comms[0] = comm;
     comms[1] = comm;
     comms[2] = comm;
@@ -169,7 +169,7 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
   ~mpi_transport_event_driven() {
 #ifndef NDEBUG
     for (size_t i = 0; i < size(); ++i) {
-      BOOST_ASSERT (sends_pending_per_dest[i].load() == 0);
+      assert (sends_pending_per_dest[i].load() == 0);
     }
 #endif
   }
@@ -188,8 +188,8 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
   void setup_end_epoch_with_value(uintmax_t val);
   void finish_end_epoch();
 
-  boost::shared_ptr<void> alloc_memory(size_t sz) const {
-    return boost::static_pointer_cast<void>(pool.alloc(sz));
+  std::shared_ptr<void> alloc_memory(size_t sz) const {
+    return std::static_pointer_cast<void>(pool.alloc(sz));
   }
 
   // This communicator should be MPI_Comm_dup'ed before use
@@ -201,7 +201,7 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
 
   void set_use_ssend(bool x) {use_ssend = x;}
   bool get_use_ssend() const {return use_ssend;}
-  void set_recvdepth(size_t recvdepth_) {BOOST_ASSERT (recvdepth_ >= 1); recvdepth = recvdepth_;}
+  void set_recvdepth(size_t recvdepth_) {assert (recvdepth_ >= 1); recvdepth = recvdepth_;}
   size_t get_recvdepth() const {return recvdepth;}
   void set_use_any_source(bool use_any_source_) {use_any_source = use_any_source_;}
   bool get_use_any_source() const {return use_any_source;}
@@ -222,10 +222,10 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
   // bool any_sends_pending() const {return sends_pending.load();}
 
   void set_termination_detector(const termination_detector& td_) {
-    if (boost::shared_ptr<detail::td_thread_wrapper> w = boost::dynamic_pointer_cast<detail::td_thread_wrapper>(td_)) {
+    if (std::shared_ptr<detail::td_thread_wrapper> w = std::dynamic_pointer_cast<detail::td_thread_wrapper>(td_)) {
       td = w;
     } else {
-      td = boost::make_shared<detail::td_thread_wrapper>(td_, boost::ref(env.get_scheduler()));
+      td = std::make_shared<detail::td_thread_wrapper>(td_, std::ref(env.get_scheduler()));
     }
   }
   termination_detector get_termination_detector() const {return td;}
@@ -243,19 +243,19 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
 
   private:
   void add_message_type(mpi_message_type* mt) {
-    BOOST_ASSERT (!td->in_epoch());
+    assert (!td->in_epoch());
     message_types.push_back(mt);
   }
   void remove_message_type(mpi_message_type* mt) {
-    BOOST_ASSERT (!td->in_epoch());
+    assert (!td->in_epoch());
     std::vector<mpi_message_type*>::iterator i = std::find(message_types.begin(), message_types.end(), mt);
-    BOOST_ASSERT (i != message_types.end());
+    assert (i != message_types.end());
     message_types.erase(i);
   }
   void replace_message_type(mpi_message_type* old_mt, mpi_message_type* new_mt) {
-    BOOST_ASSERT (!td->in_epoch());
+    assert (!td->in_epoch());
     std::vector<mpi_message_type*>::iterator i = std::find(message_types.begin(), message_types.end(), old_mt);
-    BOOST_ASSERT (i != message_types.end());
+    assert (i != message_types.end());
     *i = new_mt;
   }
 
@@ -272,9 +272,9 @@ class mpi_transport_event_driven: public transport_base, boost::noncopyable {
   std::vector<mpi_message_type*> message_types;
   amplusplus::detail::recursive_mutex lock;
   mutable detail::mpi_pool pool;
-  boost::shared_ptr<detail::td_thread_wrapper> td;
-  boost::scoped_ptr<boost::barrier> begin_epoch_barrier;
-  boost::scoped_ptr<boost::barrier> end_epoch_barrier;
+  std::shared_ptr<detail::td_thread_wrapper> td;
+  std::unique_ptr<boost::barrier> begin_epoch_barrier;
+  std::unique_ptr<boost::barrier> end_epoch_barrier;
   boost::thread_specific_ptr<message_queue<termination_message> > term_queue;
   const int flow_control_count;
 };
@@ -292,12 +292,12 @@ class mpi_message_type: public message_type_base, public boost::noncopyable {
 
   virtual ~mpi_message_type() {
     if (this->valid) {
-      BOOST_ASSERT (this->receives.empty());
+      assert (this->receives.empty());
       trans.remove_message_type(this);
       this->valid = false;
     }
   }
-  boost::shared_ptr<void> alloc_recv_buffer() const {
+  std::shared_ptr<void> alloc_recv_buffer() const {
     return trans.alloc_memory(this->max_count * this->dt_size);
   }
   MPI_Datatype get_datatype() const {return dt;}
@@ -313,7 +313,7 @@ class mpi_message_type: public message_type_base, public boost::noncopyable {
   scheduler::task_result start_one_receive_task(transport::rank_type source, size_t idx);
   void start_receives(size_t recvdepth, bool use_any_source);
   void stop_receives(size_t recvdepth, bool use_any_source);
-  void send_untyped(const void* buf, size_t count, transport::rank_type dest, boost::function<void()> buf_deleter);
+  void send_untyped(const void* buf, size_t count, transport::rank_type dest, std::function<void()> buf_deleter);
 
   void handle_recv_completion(const detail::mpi_completion_message<detail::mpi_transport_request_info>& m);
   void handle_send_completion(const detail::mpi_completion_message<detail::mpi_transport_request_info>& m);

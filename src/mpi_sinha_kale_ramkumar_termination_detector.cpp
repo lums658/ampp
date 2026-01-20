@@ -105,7 +105,7 @@ class mpi_sinha_kale_ramkumar_termination_detector: public termination_detector_
   scheduler::task_result poll_for_events(scheduler&);
 
   void message_being_built(size_t /*dest*/, size_t /*idx*/) {
-    BOOST_ASSERT (!terminated);
+    assert (!terminated);
     // std::cerr << "send_td -> " << dest << " tag " << idx << std::endl;
     local_counts[nc_idx].fetch_add(1);
   }
@@ -114,11 +114,11 @@ class mpi_sinha_kale_ramkumar_termination_detector: public termination_detector_
   void message_sent(size_t /*dest*/, size_t /*idx*/) {
   }
   void message_received(size_t /*src*/, size_t /*idx*/) {
-    BOOST_ASSERT (!terminated);
+    assert (!terminated);
     handler_starts.fetch_add(1);
   }
   void message_handled(size_t /*src*/, size_t /*idx*/) {
-    BOOST_ASSERT (!terminated);
+    assert (!terminated);
     // std::cerr << "recvd_td from " << src << " tag " << idx << std::endl;
     local_counts[np_idx].fetch_add(1);
   }
@@ -128,9 +128,9 @@ bool mpi_sinha_kale_ramkumar_termination_detector::begin_epoch() {
   // Outer code must do a thread barrier after the end of this, and only run
   // this code in one thread
   // std::clog << (boost::format("%d starting mpi_sinha_kale_ramkumar_termination_detector::begin_epoch()\n") % boost::this_thread::get_id()).str() << std::flush;
-  BOOST_ASSERT (terminated);
-  BOOST_ASSERT (local_counts[np_idx].load() == 0);
-  BOOST_ASSERT (local_counts[nc_idx].load() == 0);
+  assert (terminated);
+  assert (local_counts[np_idx].load() == 0);
+  assert (local_counts[nc_idx].load() == 0);
   terminated = false;
   in_td = false;
   local_counts[np_idx].store(0);
@@ -147,8 +147,8 @@ void mpi_sinha_kale_ramkumar_termination_detector::setup_end_epoch() {
 
 void mpi_sinha_kale_ramkumar_termination_detector::setup_end_epoch_with_value(uintmax_t value) {
   // fprintf(stderr, "mpi_sinha_kale_ramkumar_termination_detector::setup_end_epoch_with_value() top\n");
-  boost::lock_guard<detail::mutex> l(this->lock);
-  BOOST_ASSERT (!terminated);
+  std::lock_guard<detail::mutex> l(this->lock);
+  assert (!terminated);
   local_counts[user_value_idx].fetch_add(value);
   global_counts[np_idx] = global_counts[nc_idx] = 0;
   start_iallreduce = true;
@@ -175,7 +175,7 @@ scheduler::task_result mpi_sinha_kale_ramkumar_termination_detector::poll_for_ev
   // fprintf(stderr, "mpi_sinha_kale_ramkumar_termination_detector::poll_for_events running in %p count=%d\n", (void*)pthread_self(), allreduce_start_count);
   if (!trans.idle()) return scheduler::tr_idle;
   {
-    boost::lock_guard<detail::mutex> l(this->lock);
+    std::lock_guard<detail::mutex> l(this->lock);
     // fprintf(stdout, "TD progress terminated=%d iallreduce_active=%d start_iallreduce=%d\n", (int)this->terminated, (int)this->iallreduce_active, (int)this->start_iallreduce);
     if (this->terminated || !this->in_td) {
       // fprintf(stderr, "mpi_sinha_kale_ramkumar_termination_detector rp 1\n");
@@ -213,7 +213,7 @@ scheduler::task_result mpi_sinha_kale_ramkumar_termination_detector::poll_for_ev
         // std::clog << "Allreduce done A (np = " << this->global_counts[this->np_idx] << ", nc = " << this->global_counts[this->nc_idx] << ", user_value = " << this->global_counts[this->user_value_idx] << ", phase = " << this->phase << ", prev_nc = " << this->prev_nc << ")\n" << std::flush;
         this->iallreduce_active = false;
         // std::clog << (boost::format("Allreduce done B (np = %d, nc = %d, user_value = %d, phase = %d, prev_nc = %d)\n") % this->global_counts[this->np_idx] % this->global_counts[this->nc_idx] % this->global_counts[this->user_value_idx] % this->phase % this->prev_nc).str() << std::flush;
-        BOOST_ASSERT (this->prev_nc <= this->global_counts[this->nc_idx]); // Prevent send count from decreasing
+        assert (this->prev_nc <= this->global_counts[this->nc_idx]); // Prevent send count from decreasing
         if (this->global_counts[this->np_idx] != this->global_counts[this->nc_idx]) {
           this->phase = 1;
           this->start_iallreduce = true;
@@ -246,7 +246,7 @@ scheduler::task_result mpi_sinha_kale_ramkumar_termination_detector::poll_for_ev
 }
 
 termination_detector make_mpi_sinha_kale_ramkumar_termination_detector(transport& trans) {
-  return boost::make_shared<mpi_sinha_kale_ramkumar_termination_detector>(boost::ref(trans));
+  return std::make_shared<mpi_sinha_kale_ramkumar_termination_detector>(std::ref(trans));
 }
 
 }

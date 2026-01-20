@@ -40,7 +40,7 @@
 
 namespace amplusplus {
 
-environment::environment(boost::shared_ptr<environment_base> env)
+environment::environment(std::shared_ptr<environment_base> env)
   : env(env)
 {
 }
@@ -61,18 +61,18 @@ struct first_is_t {
 
 template <typename E> first_is_t<E> first_is(const E& e) {return first_is_t<E>(e);}
 
-void transport_base::add_flush_object(const boost::function<bool ()>& f) {
-  boost::lock_guard<amplusplus::detail::mutex> l(flush_lock);
+void transport_base::add_flush_object(const std::function<bool ()>& f) {
+  std::lock_guard<amplusplus::detail::mutex> l(flush_lock);
   flushes_needed.push_back(f);
 }
 
 scheduler::task_result transport_base::flush() {
   bool did_anything = false;
-  std::vector<boost::function<bool ()> > tmp;
+  std::vector<std::function<bool ()> > tmp;
   while(true) {
-    boost::function<bool ()> f;
+    std::function<bool ()> f;
     {
-      boost::lock_guard<amplusplus::detail::mutex> l(flush_lock);
+      std::lock_guard<amplusplus::detail::mutex> l(flush_lock);
       if (flushes_needed.empty()) break;
       f.swap(flushes_needed.back());
       flushes_needed.pop_back();
@@ -84,7 +84,7 @@ scheduler::task_result transport_base::flush() {
     }
   }
   if(!tmp.empty()) {
-    boost::lock_guard<amplusplus::detail::mutex> l(flush_lock);
+    std::lock_guard<amplusplus::detail::mutex> l(flush_lock);
     flushes_needed.insert(flushes_needed.end(), tmp.begin(), tmp.end());
   }
   return did_anything ? scheduler::tr_busy : scheduler::tr_idle;
