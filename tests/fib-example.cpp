@@ -38,7 +38,8 @@
 #include <utility>
 #include <vector>
 #include <iostream>
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <memory>
 #include <string>
 #include <random>
 
@@ -169,10 +170,9 @@ int main(int argc, char* argv[]) {
 
   fib f(trans, nthreads);
 
-  boost::scoped_array<boost::thread> threads(new boost::thread[nthreads - 1]);
+  std::unique_ptr<std::thread[]> threads(new std::thread[nthreads - 1]);
   for (int i = 0; i < nthreads - 1; ++i) {
-    boost::thread thr(std::ref(f), i + 1);
-    threads[i].swap(thr);
+    threads[i] = std::thread(std::ref(f), i + 1);
   }
 
   f(input, 0);

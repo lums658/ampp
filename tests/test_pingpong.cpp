@@ -55,6 +55,7 @@
 #include <sstream>
 #include <numeric>
 #include <unistd.h>
+#include <memory>
 
 class timer {
   double start;
@@ -153,14 +154,13 @@ struct pingpong_handler_non_coalesced_sized {
   typedef amplusplus::message_type<int> tm_type;
   tm_type& tm;
   size_t size;
-  boost::shared_ptr<int> msg;
+  std::shared_ptr<int[]> msg;
 
   pingpong_handler_non_coalesced_sized(int reps, tm_type& tm, size_t size): reps(reps), tm(tm), size(size)
     { msg = this->allocate(tm.get_transport(), size); }
 
-  static boost::shared_ptr<int> allocate(const amplusplus::transport& transport, size_t size) {
-    // boost::shared_ptr<int> p = boost::static_pointer_cast<int>(transport.alloc_memory(sizeof(int) * size));
-    boost::shared_ptr<int> p(new int[size], boost::checked_array_deleter<int>());
+  static std::shared_ptr<int[]> allocate(const amplusplus::transport& /*transport*/, size_t size) {
+    std::shared_ptr<int[]> p(new int[size]);
     assert (p.get());
     return p;
   }
@@ -298,7 +298,7 @@ void do_one_thread(amplusplus::environment& env) {
       tm.set_max_count(size);
       tm.set_handler(pingpong_handler_non_coalesced_sized(actual_reps, tm, size));
       amplusplus::scoped_epoch epoch(trans);
-      boost::shared_ptr<int> msg(pingpong_handler_non_coalesced_sized::allocate(tm.get_transport(), size));
+      std::shared_ptr<int[]> msg(pingpong_handler_non_coalesced_sized::allocate(tm.get_transport(), size));
       {
         timer t("AM++ no coalescing (size = " + std::to_string(size * sizeof(int)) + ")", actual_reps * 2, size * sizeof(int), (trans.rank() == 0));
         if (trans.rank() == 0) {
@@ -350,7 +350,7 @@ int main(int argc, char** argv) {
   amplusplus::environment env = amplusplus::mpi_environment(argc, argv);
   do_one_thread(env);
 #elif IS_SHM_TRANSPORT
-  boost::scoped_ptr<amplusplus::shm_environment_common> common;
+  std::unique_ptr<amplusplus::shm_environment_common> common;
 
 #pragma omp parallel
   {

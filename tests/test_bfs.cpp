@@ -67,9 +67,10 @@
 #include <boost/graph/two_bit_color_map.hpp>
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random.hpp>
-#include <boost/smart_ptr.hpp>
+#include <memory>
+#include <mutex>
+#include <barrier>
 #include <boost/graph/compressed_sparse_row_graph.hpp>
-#include <boost/functional/hash.hpp>
 #include <cassert>
 #include <utility>
 #include <functional>
@@ -252,8 +253,8 @@ struct coalescing<oba_hypercube_reduced_ct, AMTransport, OwnerMap> {
 struct value_with_loc {long val; int idx;}; // To use MPI::MAXLOC
 
 #if IS_SHM_TRANSPORT
-boost::scoped_ptr<boost::barrier> reduction_barrier;
-boost::mutex reduction_lock;
+std::unique_ptr<std::barrier<>> reduction_barrier;
+std::mutex reduction_lock;
 value_with_loc reduction_value;
 #endif
 
@@ -293,7 +294,7 @@ struct do_test_2 {
       if (rank == 0) reduction_value = highest_degree_vertex;
       reduction_barrier->wait();
       {
-        boost::lock_guard<boost::mutex> l(reduction_lock);
+        std::lock_guard<std::mutex> l(reduction_lock);
         if (highest_degree_vertex.val < reduction_value.val) {
           reduction_value = highest_degree_vertex;
         }
@@ -431,7 +432,6 @@ void do_one_thread(amplusplus::environment& env) {
   }
   if (rank == 0) fprintf(stderr, "Made %lu edges total\n", (unsigned long)edge_count);
   // fprintf(stderr, "Adding Hamiltonian cycle\n");
-  boost::variate_generator<Generator, boost::uniform_int<> > random_vertex(gen, boost::uniform_int<>(0, graph_size - 1));
   std::vector<Vertex> perm(graph_size);
   for (Vertex i = 0; i < graph_size; ++i) perm[i] = i;
 
@@ -571,14 +571,14 @@ int main(int argc, char** argv) {
   amplusplus::environment env = amplusplus::mpi_environment(argc, argv);
   do_one_thread(env);
 #elif IS_SHM_TRANSPORT
-  boost::scoped_ptr<amplusplus::shm_environment_common> common;
+  std::unique_ptr<amplusplus::shm_environment_common> common;
 
 #pragma omp parallel
   {
 #pragma omp single
     {
       common.reset(new amplusplus::shm_environment_common(omp_get_num_threads()));
-      reduction_barrier.reset(new boost::barrier(omp_get_num_threads()));
+      reduction_barrier = std::make_unique<std::barrier<>>(omp_get_num_threads());
     }
     amplusplus::environment env = amplusplus::shm_environment(*common, omp_get_thread_num());
     do_one_thread(env);

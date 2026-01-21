@@ -10,8 +10,50 @@ The AM++ repository contains a high-performance asynchronous active-messages run
 3. Remove remaining Boost vestiges
 4. Migrate from libnbc to MPI-3 non-blocking collectives
 
-### Target C++ Standard: **C++17** (minimum)
-This provides access to all necessary standard library replacements for the Boost features used.
+### Target C++ Standard: **C++20** (adopted)
+Using C++20 provides access to `std::barrier`, `std::bit_width`, and other modern features.
+
+---
+
+## Migration Progress (Updated January 2026)
+
+### Completed
+- [x] CMake build system created (replaced Autotools)
+- [x] MPI-3 non-blocking collectives (removed libnbc)
+- [x] `boost::shared_ptr` → `std::shared_ptr`
+- [x] `boost::scoped_ptr` → `std::unique_ptr`
+- [x] `boost::shared_array` → `std::shared_ptr<T[]>`
+- [x] `boost::scoped_array` → `std::unique_ptr<T[]>`
+- [x] `boost::thread` → `std::thread`
+- [x] `boost::mutex` → `std::mutex`
+- [x] `boost::lock_guard` → `std::lock_guard`
+- [x] `boost::barrier` → `std::barrier<>` (C++20)
+- [x] `boost::memory_order_*` → `std::memory_order_*`
+- [x] `boost::scoped_lock` → `std::scoped_lock`
+- [x] `boost::iterator_facade` → manual iterator implementation (append_buffer)
+- [x] `boost::functional/hash.hpp` → removed (unused)
+- [x] Catch2 unit testing framework added
+
+### Remaining Boost Dependencies (Required)
+These Boost libraries have no standard library equivalent:
+
+**Core Library (am++/):**
+- `boost/intrusive/slist.hpp` - Intrusive singly-linked list for message queues
+- `boost/intrusive/list.hpp` - Intrusive list for amortized hooks
+- `boost/pool/pool.hpp` - Memory pooling for MPI buffers
+- `boost/property_map/property_map.hpp` - Property maps for graph algorithms
+- `boost/tuple/tuple.hpp` - MPI datatype support for boost::tuple types
+
+**Test Programs:**
+- `boost/graph/*` - Graph data structures (compressed_sparse_row_graph, etc.)
+- `boost/fusion/*` - Compile-time heterogeneous containers
+- `boost/random/*` - Random number generators (used by graph generators)
+- `boost/pool/object_pool.hpp` - Object pooling
+
+### Notes
+- Boost.Graph is fundamental to the test programs (BFS, matrix-vector multiply)
+- Boost.Intrusive provides O(1) container operations that std:: containers cannot match
+- Boost.Pool provides efficient memory allocation patterns for MPI
 
 ---
 

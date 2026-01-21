@@ -60,6 +60,7 @@
 #include <cassert>
 #include <utility>
 #include <functional>
+#include <memory>
 
 typedef amplusplus::transport::rank_type rank_type;
 
@@ -240,7 +241,7 @@ int main(int argc, char** argv) {
   amplusplus::environment env = amplusplus::mpi_environment(argc, argv);
   do_one_thread(env);
 #elif IS_SHM_TRANSPORT
-  boost::scoped_ptr<amplusplus::shm_environment_common> common;
+  std::unique_ptr<amplusplus::shm_environment_common> common;
 
 #pragma omp parallel
   {
