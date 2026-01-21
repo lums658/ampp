@@ -217,7 +217,7 @@ class append_buffer {
   public:
   typedef T value_type;
   typedef append_buffer_iterator<T> iterator;
-  typedef append_buffer_iterator<const T> const_iterator;
+  typedef append_buffer_iterator<T> const_iterator;  // Same type - constness comes from usage
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   typedef T& reference;

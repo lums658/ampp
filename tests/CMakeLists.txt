@@ -54,3 +54,25 @@ target_link_libraries(fib-example PRIVATE ampp)
 
 # Custom targets for building examples
 add_custom_target(examples DEPENDS tutorial fib-example)
+
+# Unit tests (using Catch2)
+add_executable(unit_tests
+    unit/test_append_buffer.cpp
+    unit/test_append_buffer_threaded.cpp
+    unit/test_typed_in_place_factory.cpp
+    unit/test_vector_of_noncopyable.cpp
+    unit/test_id_assigner.cpp
+    unit/test_id_assigner_first_principles.cpp
+    unit/test_type_info_map.cpp
+    unit/test_signal.cpp
+    unit/test_signal_first_principles.cpp
+)
+
+target_link_libraries(unit_tests PRIVATE
+    ampp
+    Catch2::Catch2WithMain
+)
+
+# Register unit tests with CTest
+include(Catch)
+catch_discover_tests(unit_tests)

@@ -83,6 +83,16 @@ add_subdirectory(src)
 # Testing
 if(BUILD_TESTING)
     enable_testing()
+
+    # Fetch Catch2 for unit tests
+    include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.5.2
+    )
+    FetchContent_MakeAvailable(Catch2)
+
     add_subdirectory(tests)
 endif()
 
