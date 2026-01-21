@@ -54,7 +54,6 @@
 // #include <valgrind/callgrind.h>
 #if IS_MPI_TRANSPORT
 #include <mpi.h>
-#include <nbc.h>
 #endif
 #include <cassert>
 
@@ -494,9 +493,9 @@ void do_one_thread(amplusplus::environment& env) {
   }
 
 #if IS_MPI_TRANSPORT
-  NBC_Request nbcreq;
-  NBC_Ibarrier(MPI_COMM_WORLD, &nbcreq);
-  NBC_Wait(&nbcreq, MPI_STATUS_IGNORE);
+  MPI_Request mpi_req;
+  MPI_Ibarrier(MPI_COMM_WORLD, &mpi_req);
+  MPI_Wait(&mpi_req, MPI_STATUS_IGNORE);
 #endif
 
   // run_mpi(rank, size);

@@ -19,7 +19,6 @@ target_include_directories(ampp
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/libnbc-stub/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
