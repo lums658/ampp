@@ -9,7 +9,25 @@
       "Bash(gh repo create:*)",
       "Bash(git init:*)",
       "Bash(git -C /Users/lums/LSU/ampp-develop status --short)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(cmake --build:*)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop add CMakeLists.txt cmake/ src/CMakeLists.txt tests/CMakeLists.txt .gitignore)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop diff --staged --stat)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop log --oneline -3)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop commit -m \"$\\(cat <<''EOF''\nAdd CMake build system\n\nPhase 1 of the modernization plan: Create CMake build infrastructure\nalongside the existing Autotools system.\n\nFeatures:\n- Root CMakeLists.txt with project configuration\n- cmake/ directory with config templates\n- src/CMakeLists.txt for library build\n- tests/CMakeLists.txt for test programs\n- Support for threading models \\(serialized, multiple, none\\)\n- MPI-3 NBC via libnbc-stub compatibility header\n- pkg-config and CMake package config generation\n\nBuild with:\n  mkdir build && cd build\n  cmake ..\n  cmake --build .\n\nNote: Three tests \\(test_bfs_threaded, test_matvec_t, testbuffer\\) are\ntemporarily disabled due to pre-existing template issues with\ncounter_coalesced_message_type_gen that need fixing.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C /Users/lums/LSU/ampp-develop push origin main)",
+      "Bash(xargs sed:*)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop add:*)",
+      "Bash(git -C /Users/lums/LSU/ampp-develop commit -m \"$\\(cat <<''EOF''\nBegin Boost to C++ Standard Library migration\n\nReplace commonly used Boost components with C++ standard library equivalents:\n\nSmart Pointers:\n- boost::shared_ptr -> std::shared_ptr\n- boost::weak_ptr -> std::weak_ptr  \n- boost::make_shared -> std::make_shared\n- boost::dynamic_pointer_cast -> std::dynamic_pointer_cast\n\nThreading:\n- boost::mutex -> std::mutex\n- boost::lock_guard -> std::lock_guard\n- boost::function -> std::function\n- boost::ref/cref -> std::ref/cref\n\nContainers and Utilities:\n- boost::unordered_set -> std::unordered_set\n- boost::hash -> std::hash\n- BOOST_ASSERT -> assert\n\nType Traits \\(partial\\):\n- boost::mpl::false_ -> std::false_type\n- boost::mpl::true_ -> std::true_type\n- boost::is_integral -> std::is_integral\n- boost::enable_if -> std::enable_if \\(with ::value\\)\n\nRemaining Boost dependencies \\(no std replacement\\):\n- Boost.Graph \\(for routing algorithms\\)\n- Boost.Intrusive \\(for message queues\\)\n- Boost.Pool \\(for memory pooling\\)\n- Boost.Parameter \\(for named parameters\\)\n- boost::function_traits \\(no std equivalent\\)\n- boost::mpl \\(partial usage remains\\)\n\nThe library compiles and tests pass with these changes.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(make:*)",
+      "Bash(git push)",
+      "Bash(ctest:*)",
+      "Bash(git stash:*)",
+      "Bash(cmake:*)",
+      "Bash(git checkout:*)",
+      "Bash(mpiexec:*)",
+      "Bash(git apply:*)",
+      "Bash(git push:*)"
     ]
   }
 }

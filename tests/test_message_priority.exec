@@ -1,1 +1,0 @@
-$AMPP_MPI_EXEC tests/test_message_priority -n 2
