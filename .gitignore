@@ -58,6 +58,13 @@ tests/ring_test
 tests/buffer_test
 tests/tutorial_*
 
+# CTest output
+Testing/
+
+# Automake test artifacts
+*.trs
+*.exec*
+
 # OS files
 .DS_Store
 Thumbs.db
