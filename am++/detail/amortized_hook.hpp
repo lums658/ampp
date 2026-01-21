@@ -120,13 +120,13 @@ template <typename Tag>
 class static_amortized_hook {
   public:
   static amortized_hook& get() {
-    amortized_hook * tmp = instance_.load(boost::memory_order_consume);
+    amortized_hook * tmp = instance_.load(std::memory_order_consume);
     if (!tmp) {
-      std::mutex::scoped_lock l(instantiation_mutex);
-      tmp=instance_.load(boost::memory_order_consume);
+      std::lock_guard<std::mutex> l(instantiation_mutex);
+      tmp=instance_.load(std::memory_order_consume);
       if (!tmp) {
         tmp=new amortized_hook;
-        instance_.store(tmp, boost::memory_order_release);
+        instance_.store(tmp, std::memory_order_release);
       }
     }
     return *tmp;

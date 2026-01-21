@@ -178,11 +178,7 @@ private:
 
   size_t get_size() const {return size_t(1) << lg_size;}
 
-#ifdef BOOST_NO_DEFAULTED_FUNCTIONS
-  private: simple_cache_remove_duplicates(const simple_cache_remove_duplicates&); public:
-#else
   simple_cache_remove_duplicates(const simple_cache_remove_duplicates&) = delete;
-#endif
 
   void clear() {
     counters.clear();
@@ -351,9 +347,7 @@ private:
 
   const handler_type& get_handler() {return CoalescingLayer::get_handler();}
   void set_handler(const handler_type& h) {CoalescingLayer::set_handler(h);}
-#ifndef BOOST_NO_RVALUE_REFERENCES
   void set_handler(handler_type&& h) {CoalescingLayer::set_handler(std::move(h));}
-#endif
   transport get_transport() const {return CoalescingLayer::get_transport();}
 };
 

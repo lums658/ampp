@@ -28,7 +28,6 @@
 
 #include <am++/traits.hpp>
 #include <am++/detail/thread_support.hpp>
-#include <boost/config.hpp>
 #include <optional>
 #include <functional>
 #include <cassert>

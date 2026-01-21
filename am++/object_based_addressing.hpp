@@ -30,10 +30,7 @@
 #include <am++/dummy_buffer_sorter.hpp>
 #include <am++/detail/factory_wrapper.hpp>
 #include <boost/property_map/property_map.hpp>
-#include <boost/range.hpp>
-#include <boost/intrusive/detail/get_value_traits.hpp>
-#include <boost/intrusive/detail/math.hpp>
-#include <boost/shared_container_iterator.hpp>
+#include <bit>
 #include <iostream>
 #include <sstream>
 #include <cassert>
@@ -48,18 +45,12 @@ namespace amplusplus {
     template <typename Handler>
     class oba_handler {
       public:
-#ifndef BOOST_NO_RVALUE_REFERENCES
       oba_handler(const Handler& handler): handler(handler) {}
       oba_handler(Handler&& h = Handler()): handler(std::move(h)) {}
-#else
-      oba_handler(const Handler& handler = Handler()): handler(handler) {}
-#endif
-#ifndef BOOST_NO_DEFAULTED_FUNCTIONS
       oba_handler(const oba_handler&) = default;
       oba_handler(oba_handler&&) = default;
       oba_handler& operator=(oba_handler&&) = default;
       oba_handler& operator=(const oba_handler&) = default;
-#endif
 
       template <typename RankType, typename Data>
       void operator()(RankType& /*rank*/, const Data& data) {
@@ -148,23 +139,14 @@ namespace amplusplus {
     {
     }
 
-#ifndef BOOST_NO_DELETED_FUNCTIONS
     object_based_addressing(const object_based_addressing&) = delete;
-#endif
-
-#ifndef BOOST_NO_DEFAULTED_FUNCTIONS
-#ifndef BOOST_NO_RVALUE_REFERENCES
     object_based_addressing(object_based_addressing&&) = default;
     object_based_addressing& operator=(object_based_addressing&&) = default;
-#endif
-#endif
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
     void set_handler(handler_type&& handler_) {
       assert (initialized);
       base_type::set_handler(detail::oba_handler<Handler>(std::move(handler_)));
     }
-#endif
 
     void set_handler(const handler_type& handler_) {
       assert (initialized);
@@ -280,12 +262,10 @@ namespace amplusplus {
       base_type::set_handler(base_handler_type(*this, handler_));
     }
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
     void set_handler(handler_type&& handler_) {
       assert (initialized);
       base_type::set_handler(base_handler_type(*this, std::move(handler_)));
     }
-#endif
 
     handler_type& get_handler() {
       assert (initialized);
@@ -384,7 +364,7 @@ struct hypercube_routing {
   transport::rank_type lg_sz;
   hypercube_routing(): my_rank(0), sz(0), lg_sz(0) {}
   hypercube_routing(transport::rank_type my_rank, transport::rank_type sz)
-    : my_rank(transport::rank_type(my_rank)), sz(sz), lg_sz(transport::rank_type(boost::intrusive::detail::floor_log2(sz)))
+    : my_rank(transport::rank_type(my_rank)), sz(sz), lg_sz(transport::rank_type(std::bit_width(sz) - 1))
   {
     if ((sz & (sz - 1)) != 0) { // Not a power of 2
       fprintf(stderr, "Trying to use hypercube routing on non-power-of-2 process count %zu\n", sz);
@@ -419,7 +399,7 @@ struct dissemination_routing {
   transport::rank_type lg_sz;
   dissemination_routing(): my_rank(0), sz(0), lg_sz(0) {}
   dissemination_routing(transport::rank_type my_rank, transport::rank_type sz)
-    : my_rank(transport::rank_type(my_rank)), sz(sz), lg_sz(transport::rank_type(boost::intrusive::detail::ceil_log2(sz))) {}
+    : my_rank(transport::rank_type(my_rank)), sz(sz), lg_sz(transport::rank_type(sz > 1 ? std::bit_width(sz - 1) : 0)) {}
   transport::rank_type next_hop(transport::rank_type i) const {
     transport::rank_type delta = (sz + transport::rank_type(i) - my_rank) % sz;
     return transport::rank_type((my_rank + (delta & -delta)) % sz);

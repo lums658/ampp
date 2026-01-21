@@ -25,15 +25,18 @@
 
 #include <config.h>
 
-#include <boost/config.hpp>
+// Token pasting macros (replacement for BOOST_JOIN)
+#define AMPP_JOIN2(a, b) a##b
+#define AMPP_JOIN(a, b) AMPP_JOIN2(a, b)
+
 #define IS_MPI_TRANSPORT_mpi 1
 #define IS_MPI_TRANSPORT_gasnet 0
 #define IS_MPI_TRANSPORT_shm 0
-#define IS_MPI_TRANSPORT BOOST_JOIN(IS_MPI_TRANSPORT_, TRANSPORT)
+#define IS_MPI_TRANSPORT AMPP_JOIN(IS_MPI_TRANSPORT_, TRANSPORT)
 #define IS_SHM_TRANSPORT_mpi 0
 #define IS_SHM_TRANSPORT_gasnet 0
 #define IS_SHM_TRANSPORT_shm 1
-#define IS_SHM_TRANSPORT BOOST_JOIN(IS_SHM_TRANSPORT_, TRANSPORT)
+#define IS_SHM_TRANSPORT AMPP_JOIN(IS_SHM_TRANSPORT_, TRANSPORT)
 
 #if IS_SHM_TRANSPORT
 #include <omp.h>
@@ -47,8 +50,7 @@
 #include <am++/reductions.hpp>
 #include <am++/message_type_generators.hpp>
 #include <am++/detail/thread_support.hpp>
-#include <boost/config.hpp>
-#define TRANSPORT_HEADER <am++/BOOST_JOIN(TRANSPORT, _transport).hpp>
+#define TRANSPORT_HEADER <am++/AMPP_JOIN(TRANSPORT, _transport).hpp>
 #include TRANSPORT_HEADER
 #if IS_MPI_TRANSPORT
 #include <mpi.h>
@@ -152,12 +154,10 @@ struct update_vertex_handler {
   update_vertex_handler(): my_start(0), my_end(0), visited(NULL), local_queue(NULL), local_queue_size(NULL) {}
   update_vertex_handler(Vertex my_start, Vertex my_end, char* visited, Vertex*& local_queue, amplusplus::detail::atomic<size_t>& local_queue_size)
     : my_start(my_start), my_end(my_end), visited(visited), local_queue(&local_queue), local_queue_size(&local_queue_size) {}
-#ifndef BOOST_NO_DEFAULTED_FUNCTIONS
   update_vertex_handler(update_vertex_handler&&) = default;
   update_vertex_handler(const update_vertex_handler&) = delete;
   update_vertex_handler& operator=(update_vertex_handler&&) = default;
   update_vertex_handler& operator=(const update_vertex_handler&) = delete;
-#endif
 
   void operator()(const update_vertex_data& data) const {
     // fprintf(stderr, "Got %zu %s range\n", v, (v >= my_start && v < my_end) ? "in" : "out of");

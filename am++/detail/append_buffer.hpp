@@ -27,10 +27,9 @@
 #define AMPLUSPLUS_DETAIL_APPEND_BUFFER_HPP
 
 #include <memory>
-#include <boost/iterator.hpp>
 #include <cassert>
 #include <iterator>
-#include <boost/intrusive/detail/get_value_traits.hpp>
+#include <bit>
 #include <cmath>
 #include <am++/detail/thread_support.hpp>
 
@@ -51,19 +50,24 @@ class append_buffer;
 
 template <typename T>
 class append_buffer_iterator
-    : public boost::iterator_facade<append_buffer_iterator<T>, T,
-                                    std::random_access_iterator_tag>
 {
   public:
+  // Standard iterator type aliases
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = T*;
+  using reference = T&;
+
   append_buffer_iterator(const append_buffer<T>& buf, size_t idx = 0)
     : ptr_to_current_chunk(&buf.chunk_ptrs[0]),
       current_chunk_num(0),
       offset_in_chunk(0),
       buf(buf)
-  {this->advance((std::ptrdiff_t)idx);}
+  {this->advance_by((std::ptrdiff_t)idx);}
 
-  private:
-  T& dereference() const {
+  // Dereference operators
+  reference operator*() const {
     T* ptr = 0;
     do {
       ptr = ptr_to_current_chunk->load();
@@ -71,31 +75,112 @@ class append_buffer_iterator
     return ptr[offset_in_chunk];
   }
 
-  bool equal(const append_buffer_iterator<T>& o) const {
-    return this->current_chunk_num == o.current_chunk_num &&
-           this->offset_in_chunk == o.offset_in_chunk &&
-           &this->buf == &o->buf;
+  pointer operator->() const {
+    return &(this->operator*());
   }
 
-  void increment() {
+  reference operator[](difference_type n) const {
+    append_buffer_iterator tmp = *this;
+    tmp.advance_by(n);
+    return *tmp;
+  }
+
+  // Comparison operators
+  bool operator==(const append_buffer_iterator<T>& o) const {
+    return this->current_chunk_num == o.current_chunk_num &&
+           this->offset_in_chunk == o.offset_in_chunk &&
+           &this->buf == &o.buf;
+  }
+
+  bool operator!=(const append_buffer_iterator<T>& o) const {
+    return !(*this == o);
+  }
+
+  bool operator<(const append_buffer_iterator<T>& o) const {
+    return (this->current_chunk_num < o.current_chunk_num) ||
+           (this->current_chunk_num == o.current_chunk_num && this->offset_in_chunk < o.offset_in_chunk);
+  }
+
+  bool operator>(const append_buffer_iterator<T>& o) const {
+    return o < *this;
+  }
+
+  bool operator<=(const append_buffer_iterator<T>& o) const {
+    return !(o < *this);
+  }
+
+  bool operator>=(const append_buffer_iterator<T>& o) const {
+    return !(*this < o);
+  }
+
+  // Increment/decrement operators
+  append_buffer_iterator& operator++() {
     ++offset_in_chunk;
     if (offset_in_chunk == buf.chunk_size(current_chunk_num)) {
       ++current_chunk_num;
       ++ptr_to_current_chunk;
       offset_in_chunk = 0;
     }
+    return *this;
   }
 
-  void decrement() {
+  append_buffer_iterator operator++(int) {
+    append_buffer_iterator tmp = *this;
+    ++(*this);
+    return tmp;
+  }
+
+  append_buffer_iterator& operator--() {
     if (offset_in_chunk == 0) {
       --current_chunk_num;
       --ptr_to_current_chunk;
       offset_in_chunk = buf.chunk_size(current_chunk_num);
     }
     --offset_in_chunk;
+    return *this;
   }
 
-  void advance(std::ptrdiff_t delta) {
+  append_buffer_iterator operator--(int) {
+    append_buffer_iterator tmp = *this;
+    --(*this);
+    return tmp;
+  }
+
+  // Arithmetic operators
+  append_buffer_iterator& operator+=(difference_type n) {
+    advance_by(n);
+    return *this;
+  }
+
+  append_buffer_iterator& operator-=(difference_type n) {
+    advance_by(-n);
+    return *this;
+  }
+
+  append_buffer_iterator operator+(difference_type n) const {
+    append_buffer_iterator tmp = *this;
+    tmp += n;
+    return tmp;
+  }
+
+  append_buffer_iterator operator-(difference_type n) const {
+    append_buffer_iterator tmp = *this;
+    tmp -= n;
+    return tmp;
+  }
+
+  difference_type operator-(const append_buffer_iterator<T>& o) const {
+    return ((std::ptrdiff_t)(buf.chunk_offset(this->current_chunk_num)) -
+              (std::ptrdiff_t)(buf.chunk_offset(o.current_chunk_num))) +
+           ((std::ptrdiff_t)(this->offset_in_chunk) - (std::ptrdiff_t)(o.offset_in_chunk));
+  }
+
+  friend append_buffer_iterator operator+(difference_type n, const append_buffer_iterator& it) {
+    return it + n;
+  }
+
+  private:
+  void advance_by(std::ptrdiff_t delta) {
     while (delta > 0) {
       size_t dist = (std::min)((size_t)delta, buf.chunk_size(current_chunk_num) - offset_in_chunk);
       offset_in_chunk += dist;
@@ -118,19 +203,12 @@ class append_buffer_iterator
     }
   }
 
-  std::ptrdiff_t distance_to(const append_buffer_iterator<T>& o) const {
-    return ((std::ptrdiff_t)(buf.chunk_offset(o.current_chunk_num)) -
-              (std::ptrdiff_t)(buf.chunk_offset(this->current_chunk_num))) +
-           ((std::ptrdiff_t)(o.offset_in_chunk) - (std::ptrdiff_t)(this->offset_in_chunk));
-  }
-
   private:
   const amplusplus::detail::atomic<T*>* ptr_to_current_chunk;
   size_t current_chunk_num;
   size_t offset_in_chunk;
   const append_buffer<T>& buf;
 
-  friend class iterator_core_access;
   friend class append_buffer<T>;
 };
 
@@ -300,7 +378,8 @@ class append_buffer {
   }
 
   static size_t ffs_size_t(size_t x) {
-    return (x == 0) ? 0 : 1 + boost::intrusive::detail::floor_log2(x);
+    // std::bit_width(x) returns 0 if x==0, otherwise floor_log2(x)+1
+    return std::bit_width(x);
   }
 
   size_t pos_to_chunk_num(size_t i) const {
@@ -312,7 +391,7 @@ class append_buffer {
   size_t max_capacity;
   amplusplus::detail::atomic<size_t> current_size;
   size_t num_chunks;
-  boost::shared_array<amplusplus::detail::atomic<T*> > chunk_ptrs;
+  std::shared_ptr<amplusplus::detail::atomic<T*>[]> chunk_ptrs;
 
   friend class append_buffer_iterator<T>;
 };

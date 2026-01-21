@@ -1,12 +1,16 @@
 #include <config.h>
-#include <boost/config.hpp>
+
+// Token pasting macros (replacement for BOOST_JOIN)
+#define AMPP_JOIN2(a, b) a##b
+#define AMPP_JOIN(a, b) AMPP_JOIN2(a, b)
+
 #include "am++/am++.hpp"
 #include <iostream>
 #include <pthread.h>
-#include <boost/thread.hpp>
-#include <boost/thread/barrier.hpp>
+#include <thread>
+#include <barrier>
 #include <cassert>
-#define TRANSPORT_HEADER <am++/BOOST_JOIN(TRANSPORT, _transport).hpp>
+#define TRANSPORT_HEADER <am++/AMPP_JOIN(TRANSPORT, _transport).hpp>
 #include TRANSPORT_HEADER
 
 #include <time.h>
@@ -61,10 +65,10 @@ struct msg_send_args {
   amplusplus::message_type<int>& priority_tm;
   bool coalesced;
   int start;
-  boost::barrier& barier;
+  std::barrier<>& barier;
 
   msg_send_args(amplusplus::transport& t, amplusplus::message_type<int>& mt, amplusplus::message_type<int>& priority_m, bool c, int st,
-				boost::barrier& cur_barier):
+				std::barrier<>& cur_barier):
 	trans(t), tm(mt), priority_tm(priority_m), coalesced(c), start(st), barier(cur_barier) {}
 };
 
@@ -79,7 +83,7 @@ void *send_normal_messages(void *arguments) {
   if (!(args->coalesced)) {
 
 	// wait till both threads reach here
-	args->barier.wait();
+	args->barier.arrive_and_wait();
 	
 	// message sending must be within an epoch
 	amplusplus::scoped_epoch epoch(trans);
@@ -124,8 +128,8 @@ void run_test(amplusplus::environment& env) {
   
   bool coalesced = false;
 
-  // create the barier for 2 threads
-  boost::barrier bar(2);
+  // create the barrier for 2 threads
+  std::barrier<> bar(2);
   
   struct msg_send_args args(trans,tm, ptm, coalesced, 0, bar);
 //   struct msg_send_args pargs(trans,ptm, coalesced, MSG_SIZE);

@@ -26,7 +26,6 @@
 #ifndef AMPLUSPLUS_TRAITS_HPP
 #define AMPLUSPLUS_TRAITS_HPP
 
-#include <boost/config.hpp>
 #include <utility>
 
 namespace amplusplus {
@@ -34,12 +33,8 @@ namespace amplusplus {
 template <typename MT>
 struct message_type_traits: MT::traits {};
 
-// Don't have a good place to put this:
-#ifdef BOOST_NO_RVALUE_REFERENCES
-#define AMPLUSPLUS_MOVE(x) (x)
-#else
+// Move helper macro
 #define AMPLUSPLUS_MOVE(x) ((std::move)((x)))
-#endif
 
 }
 

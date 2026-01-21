@@ -25,23 +25,25 @@
 
 #include <config.h>
 
-#include <boost/config.hpp>
+// Token pasting macros (replacement for BOOST_JOIN)
+#define AMPP_JOIN2(a, b) a##b
+#define AMPP_JOIN(a, b) AMPP_JOIN2(a, b)
+
 #define IS_MPI_TRANSPORT_mpi 1
 #define IS_MPI_TRANSPORT_gasnet 0
 #define IS_MPI_TRANSPORT_shm 0
-#define IS_MPI_TRANSPORT BOOST_JOIN(IS_MPI_TRANSPORT_, TRANSPORT)
+#define IS_MPI_TRANSPORT AMPP_JOIN(IS_MPI_TRANSPORT_, TRANSPORT)
 #define IS_SHM_TRANSPORT_mpi 0
 #define IS_SHM_TRANSPORT_gasnet 0
 #define IS_SHM_TRANSPORT_shm 1
-#define IS_SHM_TRANSPORT BOOST_JOIN(IS_SHM_TRANSPORT_, TRANSPORT)
+#define IS_SHM_TRANSPORT AMPP_JOIN(IS_SHM_TRANSPORT_, TRANSPORT)
 
 #if IS_SHM_TRANSPORT
 #include <omp.h>
 #endif
 
 #include "am++/am++.hpp"
-#include <boost/config.hpp>
-#define TRANSPORT_HEADER <am++/BOOST_JOIN(TRANSPORT, _transport).hpp>
+#define TRANSPORT_HEADER <am++/AMPP_JOIN(TRANSPORT, _transport).hpp>
 #include TRANSPORT_HEADER
 #include "am++/basic_coalesced_message_type.hpp"
 #include "am++/counter_coalesced_message_type.hpp"

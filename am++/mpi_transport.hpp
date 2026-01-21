@@ -26,7 +26,6 @@
 #ifndef AMPLUSPLUS_MPI_TRANSPORT_HPP
 #define AMPLUSPLUS_MPI_TRANSPORT_HPP
 
-#include <boost/iterator/counting_iterator.hpp>
 #include <optional>
 #include <cassert>
 #include <functional>
@@ -85,9 +84,7 @@ namespace detail {
     MPI_Comm comm;
     scoped_mpi_comm_dup(MPI_Comm c) {AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Comm_dup(c, &comm); AMPLUSPLUS_MPI_CALL_REGION_END}
     scoped_mpi_comm_dup(): comm(MPI_COMM_NULL) {}
-#ifndef BOOST_NO_RVALUE_REFERENCES
     scoped_mpi_comm_dup(scoped_mpi_comm_dup&& o): comm(MPI_COMM_NULL) {swap(*this, o);}
-#endif
     ~scoped_mpi_comm_dup() {if (comm != MPI_COMM_NULL) {AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Comm_free(&comm);AMPLUSPLUS_MPI_CALL_REGION_END}}
     operator MPI_Comm() const {return comm;}
     scoped_mpi_comm_dup& operator=(MPI_Comm c) {
@@ -97,7 +94,7 @@ namespace detail {
     }
 
     private:
-    scoped_mpi_comm_dup(const scoped_mpi_comm_dup&);
+    scoped_mpi_comm_dup(const scoped_mpi_comm_dup&) = delete;
   };
 }
 

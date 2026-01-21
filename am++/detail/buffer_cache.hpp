@@ -114,7 +114,7 @@ class buffer_cache {
     need_new_buffer: {
       std::shared_ptr<void> buf = pool.alloc();
       {
-        boost::scoped_lock<std::mutex> l(all_buffers_lock);
+        std::scoped_lock<std::mutex> l(all_buffers_lock);
         all_buffers.push_back(buf);
       }
       return buf.get();

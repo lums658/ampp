@@ -28,14 +28,11 @@
 
 #include <mpi.h>
 #include <utility>
-#include <boost/config.hpp>
 #include <memory>
 #include <boost/tuple/tuple.hpp>
+#include <tuple>
 #include <type_traits>
 #include <am++/detail/type_info_map.hpp>
-#ifndef BOOST_NO_0X_HDR_TUPLE
-#include <tuple>
-#endif
 
 namespace amplusplus {
 
@@ -172,7 +169,6 @@ struct make_mpi_datatype<boost::tuples::cons<Hd, boost::tuples::null_type> > : m
   MPI_Datatype get() const {return dt_hd.get();}
 };
 
-#ifndef BOOST_NO_0X_HDR_TUPLE
 template <size_t I, size_t N, typename Tuple, typename DTTuple>
 struct get_element_addresses_and_types {
   static void go(const Tuple& t, const DTTuple& elts_dt, MPI_Aint addrs[], MPI_Datatype types[]) {
@@ -210,7 +206,6 @@ struct make_mpi_datatype<std::tuple<Elts...>> : make_mpi_datatype_base {
   }
   MPI_Datatype get() const {return dt.get();}
 };
-#endif
 
 extern detail::type_info_map<std::shared_ptr<make_mpi_datatype_base> > mpi_datatype_map;
 

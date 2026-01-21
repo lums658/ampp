@@ -27,7 +27,6 @@
 #define AMPLUSPLUS_MESSAGE_TYPE_GENERATORS_HPP
 
 #include <boost/property_map/property_map.hpp>
-#include <boost/typeof/typeof.hpp>
 #include <am++/transport.hpp>
 #include <am++/object_based_addressing.hpp>
 #include <am++/reductions.hpp>
@@ -194,9 +193,7 @@ namespace amplusplus {
           this->send(a);
         }
         void set_handler(const Handler& h_) {h.reset(new Handler(h_));}
-#ifndef BOOST_NO_RVALUE_REFERENCES
         void set_handler(Handler&& h_) {h.reset(new Handler(std::move(h_)));}
-#endif
         const Handler& get_handler() const {assert (h); return *h;}
 
         typedef void result_type;
