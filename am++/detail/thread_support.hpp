@@ -27,7 +27,8 @@
 #define AMPLUSPLUS_DETAIL_THREAD_SUPPORT_HPP
 
 #include <mutex>
-#include <condition_variable>
+#include <barrier>
+#include <atomic>
 #include <cassert>
 #include <type_traits>
 #include <unordered_map>
@@ -57,7 +58,7 @@ namespace amplusplus {
 #define AMPLUSPLUS_MULTITHREAD(x) /**/
 #else
 #include <pthread.h>
-#if defined(__i386) || defined(__x86_64) && !_CRAYC
+#if defined(__i386__) || defined(__x86_64__) && !defined(_CRAYC)
 #include <xmmintrin.h>
 #endif
 namespace amplusplus {
@@ -65,32 +66,19 @@ namespace amplusplus {
     typedef std::mutex mutex;
     typedef std::recursive_mutex recursive_mutex;
 
-    // C++17-compatible barrier implementation (std::barrier is C++20)
+    // C++20 std::barrier wrapper with compatible API
     class barrier {
-      std::mutex mtx;
-      std::condition_variable cv;
-      unsigned int threshold;
-      unsigned int count;
-      unsigned int generation;
+      std::barrier<> impl;
     public:
-      explicit barrier(unsigned int count)
-        : threshold(count), count(count), generation(0) {}
+      explicit barrier(unsigned int count) : impl(count) {}
 
       bool wait() {
-        std::unique_lock<std::mutex> lock(mtx);
-        unsigned int gen = generation;
-        if (--count == 0) {
-          generation++;
-          count = threshold;
-          cv.notify_all();
-          return true;
-        }
-        cv.wait(lock, [this, gen] { return gen != generation; });
-        return false;
+        impl.arrive_and_wait();
+        return true;  // Return value not used, kept for API compatibility
       }
     };
 
-#if defined(__i386) || defined(__x86_64) && !_CRAYC
+#if defined(__i386__) || defined(__x86_64__) && !defined(_CRAYC)
     inline void do_pause() {_mm_pause();}
 #else
     inline void do_pause() {}
@@ -103,6 +91,7 @@ namespace amplusplus {
 
 #ifdef AMPLUSPLUS_SINGLE_THREADED
 namespace amplusplus {namespace detail {
+// No-op atomic for single-threaded mode
 template <typename T>
 class atomic {
   T value;
@@ -123,118 +112,10 @@ class atomic {
   atomic& operator-=(T x) {value -= x; return *this;}
 };
 }}
-#elif 1
-#ifdef AMPLUSPLUS_BUILTIN_ATOMICS
-#include <atomic>
 #else
-#include <boost/atomic.hpp>
-#endif
-// #include <cstdatomic>
+// Use std::atomic for multi-threaded mode (C++20)
 namespace amplusplus {namespace detail {
-#ifdef AMPLUSPLUS_BUILTIN_ATOMICS
 using std::atomic;
-#else
-using boost::atomic;
-#endif
-}}
-#elif 1
-namespace amplusplus {namespace detail {
-
-template <typename T, typename = void> struct atomics_supported: std::false_type {};
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1
-template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 1>::type>: std::true_type {};
-#endif
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2
-template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 2>::type>: std::true_type {};
-#endif
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
-template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 4>::type>: std::true_type {};
-#endif
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
-template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 8>::type>: std::true_type {};
-#endif
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 16>::type>: std::true_type {};
-#endif
-
-template <typename T>
-class atomic {
-  static_assert(atomics_supported<T>::value, "Atomics not supported for this type size");
-
-  volatile T value;
-  public:
-  atomic(T x = T()): value(x) {}
-  T load() const {__sync_synchronize(); T val = value; __sync_synchronize(); return val;}
-  void store(T x) {value = x; __sync_synchronize();}
-  T exchange(T x) {
-    T prev = 0, prev_old = 0;
-    do {
-      prev_old = prev;
-      prev = __sync_val_compare_and_swap(&value, prev_old, x);
-    } while (prev != prev_old);
-    return prev;
-  }
-  bool compare_exchange_strong(T& old_value, T new_value) {
-    T prev = __sync_val_compare_and_swap(&value, old_value, new_value);
-    if (prev == old_value) return true;
-    old_value = prev;
-    return false;
-  }
-  bool compare_exchange_weak(T& old_value, T new_value) {return compare_exchange_strong(old_value, new_value);}
-  atomic<T>& operator+=(T x) {fetch_add(x); return *this;}
-  atomic<T>& operator-=(T x) {fetch_sub(x); return *this;}
-  T fetch_add(T x) {T val = __sync_fetch_and_add(&value, x); return val;}
-  T fetch_sub(T x) {T val = __sync_fetch_and_sub(&value, x); return val;}
-  T fetch_or(T x) {T val = __sync_fetch_and_or(&value, x); return val;}
-  T fetch_and(T x) {T val = __sync_fetch_and_and(&value, x); return val;}
-  atomic& operator++() {*this += 1; return *this;}
-  atomic& operator--() {*this -= 1; return *this;}
-};
-}}
-#else
-// Lock-based version for thread debugging tools
-namespace amplusplus {namespace detail {
-template <typename T>
-class atomic {
-  mutable std::mutex lock;
-  T value;
-  public:
-  atomic(const atomic&) = delete;
-  atomic& operator=(const atomic&) = delete;
-
-  atomic(T x = T()): lock(), value(x) {}
-  T load() const {std::lock_guard<std::mutex> l(lock); return value;}
-  void store(T x) {std::lock_guard<std::mutex> l(lock); value = x;}
-  T exchange(T x) {
-    std::lock_guard<std::mutex> l(lock);
-    std::swap(value, x);
-    return x;
-  }
-  bool compare_exchange_strong(T& old_value, T new_value) {
-    std::lock_guard<std::mutex> l(lock);
-    if (value == old_value) {
-      value = new_value;
-      return true;
-    } else {
-      old_value = value;
-      return false;
-    }
-  }
-  bool compare_exchange_weak(T& old_value, T new_value) {return compare_exchange_strong(old_value, new_value);}
-  T fetch_add(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value += x; return old_value;}
-  T fetch_sub(T x) {return fetch_add(-x);}
-  T fetch_or(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value |= x; return old_value;}
-  T fetch_and(T x) {std::lock_guard<std::mutex> l(lock); T old_value = value; value &= x; return old_value;}
-  atomic& operator++() {fetch_add(1); return *this;}
-  atomic& operator--() {fetch_add(-1); return *this;}
-  atomic& operator+=(T x) {fetch_add(x); return *this;}
-  atomic& operator-=(T x) {fetch_sub(x); return *this;}
-};
 }}
 #endif
 
