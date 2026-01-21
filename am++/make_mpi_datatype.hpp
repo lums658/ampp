@@ -31,12 +31,6 @@
 #include <boost/config.hpp>
 #include <memory>
 #include <boost/tuple/tuple.hpp>
-#include <boost/mpl/has_xxx.hpp>
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/or.hpp>
-#include <boost/mpl/eval_if.hpp>
-#include <boost/mpl/bool.hpp>
-#include <boost/type_traits.hpp>
 #include <type_traits>
 #include <am++/detail/type_info_map.hpp>
 #ifndef BOOST_NO_0X_HDR_TUPLE
@@ -107,8 +101,7 @@ struct make_mpi_datatype<std::pair<A, B> > : make_mpi_datatype_base {
 
 namespace detail {
   namespace tuple_check {
-    BOOST_MPL_HAS_XXX_TRAIT_DEF(inherited);
-
+    // SFINAE trait to check if type has 'inherited' member type
     template <typename T>
     struct is_actual_cons: public std::false_type {};
 
@@ -116,28 +109,23 @@ namespace detail {
     struct is_actual_cons<boost::tuples::cons<Hd, Tl> >
       : public std::true_type {};
 
-    template <typename T>
-    struct inherited_is_cons {
-      typedef std::bool_constant<is_actual_cons<typename T::inherited>::value> type;
-    };
+    // Use SFINAE to only check inherited when it exists
+    template <typename T, typename = void>
+    struct is_cons : std::false_type {};
 
     template <typename T>
-    struct is_cons
-      : public boost::mpl::eval_if<
-                 has_inherited<T>,
-                 inherited_is_cons<T>,
-                 std::false_type>
-      {};
+    struct is_cons<T, std::void_t<typename T::inherited>>
+      : std::bool_constant<is_actual_cons<typename T::inherited>::value> {};
 
     template <typename T>
     struct is_nil
-      : public boost::is_base_and_derived<boost::tuples::null_type, T> {};
+      : public std::is_base_of<boost::tuples::null_type, T> {};
   }
 
   template <typename T>
   struct is_boost_tuple
-    : public boost::mpl::or_<tuple_check::is_cons<T>,
-                             tuple_check::is_nil<T> >
+    : public std::disjunction<tuple_check::is_cons<T>,
+                              tuple_check::is_nil<T> >
     {};
 }
 

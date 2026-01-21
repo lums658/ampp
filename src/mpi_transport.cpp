@@ -50,7 +50,7 @@
 
 // #define COLLECT_SIZE_STATS
 
-boost::recursive_mutex amplusplus::detail::mpi_lock;
+std::recursive_mutex amplusplus::detail::mpi_lock;
 
 namespace amplusplus {
 

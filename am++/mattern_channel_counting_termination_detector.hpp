@@ -28,7 +28,8 @@
 
 #include <am++/tdetect.hpp>
 #include <memory>
-#include <boost/thread.hpp>
+#include <type_traits>
+#include <mutex>
 #include <mpi.h>
 
 // THIS CODE IS CURRENTLY BROKEN (DEADLOCKS IN SOME CASES).
@@ -44,7 +45,7 @@ class mattern_channel_counting_termination_detector {
   std::unique_ptr<termination_detector> d;
   unsigned int nthreads_in_use;
   unsigned long local_value;
-  mutable boost::recursive_mutex my_lock;
+  mutable std::recursive_mutex my_lock;
 
   public:
   template <typename Transport>
@@ -52,23 +53,23 @@ class mattern_channel_counting_termination_detector {
 
   template <typename Transport>
   void initialize(Transport& tr) {
-    BOOST_STATIC_ASSERT((boost::is_same<Transport, mpi_engine<mattern_channel_counting_termination_detector> >::value));
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    static_assert(std::is_same<Transport, mpi_engine<mattern_channel_counting_termination_detector>>::value, "Transport must be mpi_engine");
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     nthreads_in_use = 0;
     local_value = 0;
     d.reset(new termination_detector(get_mpi_communicator(tr)));
   }
 
   void reset(size_t nlevels, unsigned int nthreads) {
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     ++nthreads_in_use;
     d->reset_state();
   }
 
   template <typename Transport>
   void finish(Transport& tr) {
-    BOOST_STATIC_ASSERT((boost::is_same<Transport, mpi_engine<mattern_channel_counting_termination_detector> >::value));
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    static_assert(std::is_same<Transport, mpi_engine<mattern_channel_counting_termination_detector>>::value, "Transport must be mpi_engine");
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     if (--nthreads_in_use == 0) { // Last thread
       d->start_waiting_for_termination();
     }
@@ -82,13 +83,13 @@ class mattern_channel_counting_termination_detector {
   }
   template <typename Transport>
   void progress_td(Transport&) {
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     d->progress();
   }
   template <typename Transport>
   unsigned long finish(Transport& tr, unsigned long value) {
     {
-      std::lock_guard<boost::recursive_mutex> lock(my_lock);
+      std::lock_guard<std::recursive_mutex> lock(my_lock);
       local_value += value;
     }
     this->finish(tr);
@@ -97,14 +98,14 @@ class mattern_channel_counting_termination_detector {
   }
   template <typename MsgIndexType, typename RankType>
   void before_send(MsgIndexType idx, RankType dest) {
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     d->sending_basic_message(dest);
   }
   template <typename MsgIndexType, typename RankType>
   void message_received(MsgIndexType, RankType) {}
   template <typename MsgIndexType, typename RankType>
   void after_handler(MsgIndexType idx, RankType src) {
-    std::lock_guard<boost::recursive_mutex> lock(my_lock);
+    std::lock_guard<std::recursive_mutex> lock(my_lock);
     d->finished_handling_basic_message(src);
   }
 };

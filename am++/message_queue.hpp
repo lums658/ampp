@@ -90,7 +90,7 @@ class scheduler {
           > run_queue_type;
 #endif
   run_queue_type run_queue;
-  boost::thread_specific_ptr<unsigned int> reentry_count; // Only counts reentries that should disable running handlers.
+  detail::thread_local_ptr<unsigned int> reentry_count; // Only counts reentries that should disable running handlers.
   // run_queue_type idle_tasks;
 
   struct delete_task {void operator()(task t) const {delete t;}};

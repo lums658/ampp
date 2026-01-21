@@ -154,8 +154,8 @@ class mpi_transport_event_driven: public transport_base {
   explicit mpi_transport_event_driven(environment& env, MPI_Comm comm = MPI_COMM_WORLD, int recvDepth =1 , int poll_tasks = 1, int flow_control_count = 10)
     : env(env), reqmgr(env.get_scheduler(), poll_tasks), current_comm(0),
       recvdepth(recvDepth), nthreads(1), use_any_source(false), use_ssend(false),
-      begin_epoch_barrier(new boost::barrier(1)),
-      end_epoch_barrier(new boost::barrier(1)),
+      begin_epoch_barrier(new detail::barrier(1)),
+      end_epoch_barrier(new detail::barrier(1)),
       term_queue(), flow_control_count(flow_control_count)
   {
     assert(flow_control_count > 0);
@@ -208,8 +208,8 @@ class mpi_transport_event_driven: public transport_base {
   void set_nthreads(size_t nt) {
     nthreads = nt;
     td->set_nthreads(nt);
-    begin_epoch_barrier.reset(new boost::barrier(nt));
-    end_epoch_barrier.reset(new boost::barrier(nt));
+    begin_epoch_barrier.reset(new detail::barrier(nt));
+    end_epoch_barrier.reset(new detail::barrier(nt));
   }
   size_t get_nthreads() const {return nthreads;}
 
@@ -267,14 +267,14 @@ class mpi_transport_event_driven: public transport_base {
   size_t recvdepth;
   size_t nthreads;
   bool use_any_source, use_ssend;
-  boost::scoped_array<detail::atomic<long> > sends_pending_per_dest;
+  std::unique_ptr<detail::atomic<long>[]> sends_pending_per_dest;
   std::vector<mpi_message_type*> message_types;
   amplusplus::detail::recursive_mutex lock;
   mutable detail::mpi_pool pool;
   std::shared_ptr<detail::td_thread_wrapper> td;
-  std::unique_ptr<boost::barrier> begin_epoch_barrier;
-  std::unique_ptr<boost::barrier> end_epoch_barrier;
-  boost::thread_specific_ptr<message_queue<termination_message> > term_queue;
+  std::unique_ptr<detail::barrier> begin_epoch_barrier;
+  std::unique_ptr<detail::barrier> end_epoch_barrier;
+  detail::thread_local_ptr<message_queue<termination_message> > term_queue;
   const int flow_control_count;
 };
 

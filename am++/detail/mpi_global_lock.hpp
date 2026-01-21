@@ -26,8 +26,7 @@
 #ifndef AMPLUSPLUS_DETAIL_MPI_GLOBAL_LOCK_HPP
 #define AMPLUSPLUS_DETAIL_MPI_GLOBAL_LOCK_HPP
 
-#include <boost/thread.hpp>
-#include <boost/noncopyable.hpp>
+#include <mutex>
 #include <am++/detail/thread_support.hpp>
 
 #ifdef AMPLUSPLUS_SINGLE_THREADED
@@ -39,10 +38,10 @@
 namespace amplusplus {
   namespace detail {
     // Even under MPI_THREAD_MULTIPLE, we need to guard calls to libNBC
-    extern boost::recursive_mutex mpi_lock;
+    extern std::recursive_mutex mpi_lock;
 
     struct mpi_lock_guard_for_if {
-      std::lock_guard<boost::recursive_mutex> x;
+      std::lock_guard<std::recursive_mutex> x;
       mpi_lock_guard_for_if(int): x(mpi_lock) {}
       mpi_lock_guard_for_if(const mpi_lock_guard_for_if&): x(mpi_lock) {}
       operator bool() const {return false;}
@@ -58,7 +57,5 @@ namespace amplusplus {
 #define AMPLUSPLUS_MPI_CALL_REGION_BEGIN {
 #define AMPLUSPLUS_MPI_CALL_REGION_END }
 #endif
-#define AMPLUSPLUS_NBC_CALL_REGION					\
-  if (::amplusplus::detail::mpi_lock_guard_for_if lg = 0) {} else
 
 #endif // AMPLUSPLUS_DETAIL_MPI_GLOBAL_LOCK_HPP

@@ -28,7 +28,6 @@
 
 #include <set>
 #include <functional>
-#include <boost/thread.hpp>
 #include <cassert>
 #include <am++/detail/thread_support.hpp>
 

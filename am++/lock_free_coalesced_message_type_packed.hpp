@@ -27,13 +27,13 @@
 #define AMPLUSPLUS_LOCK_FREE_COALESCED_MESSAGE_TYPE_PACKED_HPP
 
 #include <am++/detail/atomics.hpp>
+#include <am++/detail/thread_support.hpp>
 #include <am++/traits.hpp>
 #include <utility>
 #include <vector>
 #include <memory>
-#include <boost/thread.hpp>
 #include <cassert>
-#include <stdint.h>
+#include <cstdint>
 #include <am++/scoped_raw_handler.hpp>
 
 namespace amplusplus {
@@ -68,7 +68,7 @@ namespace detail {
 
 template <typename Arg, typename Handler, typename AMEngine, size_t BufferSize>
 class lock_free_coalesced_message_type_packed {
-  BOOST_STATIC_ASSERT(BufferSize <= 0xffff);
+  static_assert(BufferSize <= 0xffff, "BufferSize must fit in 16 bits");
 
   struct message_buffer {
     volatile size_t elements_written;
@@ -191,7 +191,7 @@ class lock_free_coalesced_message_type_packed {
   std::mutex buffer_pool_lock;
   std::vector<message_buffer*> buffer_pool;
   std::vector<uint64_t> outgoing_buffers_packed; // Packed using functions in detail
-  boost::thread_specific_ptr<message_buffer> buffers_to_swap_in; // One per thread
+  detail::thread_local_ptr<message_buffer> buffers_to_swap_in; // One per thread
 
   message_buffer* create_buffer() {
     std::shared_ptr<void> buf = alloc_memory(engine, sizeof(message_buffer));

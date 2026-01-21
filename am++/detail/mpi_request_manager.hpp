@@ -35,8 +35,8 @@
 #include <utility>
 #include <typeinfo>
 #include <mpi.h>
-#include <boost/thread.hpp>
-#include <boost/ref.hpp>
+#include <functional>
+#include <mutex>
 #include <memory>
 #include <cassert>
 
@@ -97,7 +97,7 @@ class mpi_request_manager {
   mutable amplusplus::detail::recursive_mutex req_queue_lock; // External so it can share an external MPI lock
 
   scheduler::task_result poll_for_messages(scheduler& sched, std::shared_ptr<bool> need_to_exit);
-  scheduler::task_result poll_unlocked(boost::unique_lock<recursive_mutex>&);
+  scheduler::task_result poll_unlocked(std::unique_lock<recursive_mutex>&);
 
   public:
   mpi_request_manager(scheduler& sched, int poll_tasks): nreqs_active(0), mpi_msg_queue(sched), need_to_exit(new bool(false)), sched(sched) {
@@ -164,7 +164,7 @@ scheduler::task_result mpi_request_manager<UserInfo>::poll_for_messages(schedule
   if (*need_to_exit) {/* fprintf(stderr, "poll_for_messages %p removing itself from queue\n", this); */ return scheduler::tr_remove_from_queue;}
   if (add_pending.load() != 0) return scheduler::tr_idle; // Don't try to lock in competition with an add
   {
-    boost::unique_lock<amplusplus::detail::recursive_mutex> lock(req_queue_lock, boost::try_to_lock);
+    std::unique_lock<amplusplus::detail::recursive_mutex> lock(req_queue_lock, std::try_to_lock);
     if (!lock.owns_lock()) return scheduler::tr_idle;
     return this->poll_unlocked(lock);
   }
@@ -185,7 +185,7 @@ namespace detail {
 
 template <typename UserInfo>
 scheduler::task_result
-mpi_request_manager<UserInfo>::poll_unlocked(boost::unique_lock<amplusplus::detail::recursive_mutex>& l) {
+mpi_request_manager<UserInfo>::poll_unlocked(std::unique_lock<amplusplus::detail::recursive_mutex>& l) {
   // fprintf(stderr, "mpi_request_manager<%s, %p>::poll_unlocked running %zu of %zu\n", typeid(UserInfo).name(), this, size_t(nreqs_active), size_t(reqs.size()));
   assert (l.owns_lock()); (void)l;
   if (nreqs_active == 0) return scheduler::tr_idle;

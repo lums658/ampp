@@ -27,7 +27,6 @@
 #define AMPLUSPLUS_DETAIL_MPI_POOL_HPP
 
 #include <boost/pool/pool.hpp>
-#include <boost/thread.hpp>
 #include <mpi.h>
 #include <memory>
 #include <am++/detail/mpi_global_lock.hpp>
@@ -93,7 +92,7 @@ struct array_deleter {
 
 class mpi_pool {
   public:
-  std::shared_ptr<char> alloc(size_t n) {return std::shared_ptr<char>(new char[n], boost::checked_array_deleter<char>());}
+  std::shared_ptr<char> alloc(size_t n) {return std::shared_ptr<char>(new char[n], std::default_delete<char[]>());}
 };
 
   }

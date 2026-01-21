@@ -26,7 +26,6 @@
 #ifndef AMPLUSPLUS_DETAIL_BUFFER_CACHE_HPP
 #define AMPLUSPLUS_DETAIL_BUFFER_CACHE_HPP
 
-#include <boost/thread.hpp>
 #include <cassert>
 #include <iostream>
 #include <memory>

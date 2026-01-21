@@ -31,8 +31,6 @@
 #include <cassert>
 #include <vector>
 #include <memory>
-#include <boost/version.hpp>
-#include <boost/thread.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>
 #include <stdint.h>
@@ -202,12 +200,10 @@ class basic_coalesced_message_type
   BufferSorter& get_buffer_sorter() {
     return buffer_sorter;
   }
-#ifndef BOOST_NO_RVALUE_REFERENCES
   void set_handler(handler_type&& handler_) {
     handler.reset(new handler_type(std::move(handler_)));
     this->mt.set_handler(raw_message_handler(*this));
   }
-#endif
 
   handler_type& get_handler() {
     assert (handler);
@@ -280,13 +276,8 @@ class basic_coalesced_message_type
   private:
   transport trans;
   message_type<Arg> mt;
-#if defined(BOOST_NO_CXX11_SMART_PTR) || BOOST_VERSION < 105000
   std::unique_ptr<detail::buffer_cache> buf_cache;
   std::unique_ptr<handler_type> handler;
-#else
-  std::unique_ptr<detail::buffer_cache> buf_cache;
-  std::unique_ptr<handler_type> handler;
-#endif
   std::vector<message_buffer> outgoing_buffers;
   size_t coalescing_size;
   amplusplus::detail::recursive_mutex lock;

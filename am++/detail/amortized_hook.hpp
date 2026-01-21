@@ -27,7 +27,6 @@
 #define AMPLUSPLUS_DETAIL_AMORTIZED_HOOK_HPP
 
 #include <boost/intrusive/list.hpp>
-#include <boost/thread.hpp>
 #include <vector>
 #include <algorithm>
 #include <am++/detail/append_buffer.hpp>

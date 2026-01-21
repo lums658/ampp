@@ -29,7 +29,6 @@
 
 #include <dcmf.h>
 #include <dcmf_collectives.h>
-#include <boost/thread.hpp>
 #include <stdio.h>
 #include <memory>
 #include <type_traits>

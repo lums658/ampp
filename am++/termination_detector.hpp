@@ -138,7 +138,7 @@ class td_thread_wrapper: public amplusplus::termination_detector_base {
     message_queue<termination_message> term_queue;
     per_thread_data(scheduler& sched): id(-1), activity_count(0), term_queue(sched) {}
   };
-  boost::thread_specific_ptr<per_thread_data> thread_data_ptr;
+  detail::thread_local_ptr<per_thread_data> thread_data_ptr;
   std::vector<message_queue<termination_message>*> msg_queues; // Pointers into per-thread data to allow access by other threads
   scheduler& sched;
   mutable amplusplus::detail::recursive_mutex lock;

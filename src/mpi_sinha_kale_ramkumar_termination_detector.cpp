@@ -25,8 +25,6 @@
 
 #include <config.h>
 #include <mpi.h>
-#include <boost/thread.hpp>
-#include <nbc.h>
 #include <stdio.h>
 #include <memory>
 #include <type_traits>
@@ -55,7 +53,7 @@ class mpi_sinha_kale_ramkumar_termination_detector: public termination_detector_
   MPI_Comm comm;
   bool start_iallreduce, iallreduce_active;
   int allreduce_start_count;
-  NBC_Request reduce_req;
+  MPI_Request reduce_req;
   int phase; // 1 or 2
   unsigned long prev_nc;
   unsigned long local_counts_to_send[3]; // copy to prevent modification of send buffer
@@ -80,10 +78,10 @@ class mpi_sinha_kale_ramkumar_termination_detector: public termination_detector_
     local_counts[user_value_idx].store(0);
     handler_starts.store(0);
     AMPLUSPLUS_MPI_CALL_REGION_BEGIN MPI_Comm_dup(comm_, &comm); AMPLUSPLUS_MPI_CALL_REGION_END
-    // Initialize NBC on this comm so the allreduce won't block later
-    NBC_Request req;
-    {int errcode = MPI_SUCCESS; AMPLUSPLUS_NBC_CALL_REGION errcode = NBC_Ibarrier(comm, &req); if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
-    {int errcode = MPI_SUCCESS; AMPLUSPLUS_NBC_CALL_REGION errcode = NBC_Wait(&req, MPI_STATUS_IGNORE); if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
+    // Initialize with a barrier to ensure all ranks are ready
+    MPI_Request req;
+    {int errcode = MPI_SUCCESS; AMPLUSPLUS_MPI_CALL_REGION_BEGIN errcode = MPI_Ibarrier(comm, &req); AMPLUSPLUS_MPI_CALL_REGION_END if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
+    {int errcode = MPI_SUCCESS; AMPLUSPLUS_MPI_CALL_REGION_BEGIN errcode = MPI_Wait(&req, MPI_STATUS_IGNORE); AMPLUSPLUS_MPI_CALL_REGION_END if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
     allreduce_start_count = 0;
     terminated = true;
     in_td = false;
@@ -195,18 +193,18 @@ scheduler::task_result mpi_sinha_kale_ramkumar_termination_detector::poll_for_ev
       for (int i = 0; i < 3; ++i) this->local_counts_to_send[i] = this->local_counts[i].load();
       last_total = this->local_counts_to_send[0] + this->local_counts_to_send[1];
       // fprintf(stderr, "Iallreduce %p %p %zu\n", (void*)this->local_counts_to_send, (void*)this->global_counts, (size_t)this->local_counts_to_send[0]);
-      {int errcode = MPI_SUCCESS; AMPLUSPLUS_NBC_CALL_REGION errcode = NBC_Iallreduce((void*)this->local_counts_to_send, this->global_counts, 3, MPI_UNSIGNED_LONG, MPI_SUM, this->comm, &this->reduce_req); if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
+      {int errcode = MPI_SUCCESS; AMPLUSPLUS_MPI_CALL_REGION_BEGIN errcode = MPI_Iallreduce((void*)this->local_counts_to_send, this->global_counts, 3, MPI_UNSIGNED_LONG, MPI_SUM, this->comm, &this->reduce_req); AMPLUSPLUS_MPI_CALL_REGION_END if (errcode != MPI_SUCCESS) MPI_Comm_call_errhandler(this->comm, errcode);}
       ++this->allreduce_start_count; // For debugging
       // std::clog << (boost::format("%d: Started iallreduce phase %d np=%d nc=%d count=%d\n") % this % this->phase % this->local_counts_to_send[this->np_idx] % this->local_counts_to_send[this->nc_idx] % this->allreduce_start_count).str() << std::flush;
       this->iallreduce_active = true;
       this->start_iallreduce = false;
     }
     if (this->iallreduce_active) {
-      int not_completed = NBC_OK;
+      int completed = 0;
       int errcode = MPI_SUCCESS;
-      AMPLUSPLUS_NBC_CALL_REGION errcode = NBC_Test(&this->reduce_req, &not_completed, MPI_STATUS_IGNORE);
+      AMPLUSPLUS_MPI_CALL_REGION_BEGIN errcode = MPI_Test(&this->reduce_req, &completed, MPI_STATUS_IGNORE); AMPLUSPLUS_MPI_CALL_REGION_END
       if (errcode != MPI_SUCCESS) {MPI_Comm_call_errhandler(this->comm, errcode);}
-      if (!not_completed) {
+      if (completed) {
         // std::clog << "Allreduce done A (np = " << this->global_counts[this->np_idx] << ", nc = " << this->global_counts[this->nc_idx] << ", user_value = " << this->global_counts[this->user_value_idx] << ", phase = " << this->phase << ", prev_nc = " << this->prev_nc << ")\n" << std::flush;
         this->iallreduce_active = false;
         // std::clog << (boost::format("Allreduce done B (np = %d, nc = %d, user_value = %d, phase = %d, prev_nc = %d)\n") % this->global_counts[this->np_idx] % this->global_counts[this->nc_idx] % this->global_counts[this->user_value_idx] % this->phase % this->prev_nc).str() << std::flush;

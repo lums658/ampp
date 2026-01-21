@@ -31,7 +31,6 @@
 #include <cassert>
 #include <type_traits>
 #include <functional>
-#include <boost/thread.hpp>
 
 namespace amplusplus {
   namespace detail {

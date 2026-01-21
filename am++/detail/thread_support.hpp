@@ -26,18 +26,25 @@
 #ifndef AMPLUSPLUS_DETAIL_THREAD_SUPPORT_HPP
 #define AMPLUSPLUS_DETAIL_THREAD_SUPPORT_HPP
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/tss.hpp>
-#include <boost/mpl/assert.hpp>
-#include <boost/mpl/bool.hpp>
+#include <mutex>
+#include <condition_variable>
 #include <cassert>
+#include <type_traits>
+#include <unordered_map>
+#include <memory>
 
 #ifdef AMPLUSPLUS_SINGLE_THREADED
-#include <boost/signals2/dummy_mutex.hpp>
 namespace amplusplus {
   namespace detail {
-    typedef boost::signals2::dummy_mutex recursive_mutex;
-    typedef boost::signals2::dummy_mutex mutex;
+    // No-op mutex for single-threaded mode
+    struct dummy_mutex {
+      void lock() {}
+      void unlock() {}
+      bool try_lock() { return true; }
+    };
+
+    typedef dummy_mutex recursive_mutex;
+    typedef dummy_mutex mutex;
 
     class barrier {
       public:
@@ -49,45 +56,39 @@ namespace amplusplus {
 }
 #define AMPLUSPLUS_MULTITHREAD(x) /**/
 #else
-#include <boost/thread.hpp>
 #include <pthread.h>
 #if defined(__i386) || defined(__x86_64) && !_CRAYC
 #include <xmmintrin.h>
 #endif
 namespace amplusplus {
   namespace detail {
-#if 0
-    struct mutex {
-      pthread_spinlock_t actual_lock;
-
-      mutex() {pthread_spin_init(&actual_lock, PTHREAD_PROCESS_PRIVATE);}
-      ~mutex() {pthread_spin_destroy(&actual_lock);}
-
-      void lock() {pthread_spin_lock(&actual_lock);}
-      void unlock() {pthread_spin_unlock(&actual_lock);}
-    };
-    struct recursive_mutex {
-      boost::thread_specific_ptr<int> my_lock_count;
-      mutex m;
-
-      recursive_mutex(): my_lock_count(), m() {}
-
-      void lock() {
-        if (!my_lock_count.get()) my_lock_count.reset(new int(0));
-        int& my_lock_count_data = *my_lock_count;
-        if (my_lock_count_data++ == 0) m.lock();
-      }
-
-      void unlock() {
-        assert (my_lock_count.get());
-        int& my_lock_count_data = *my_lock_count;
-        if (--my_lock_count_data == 0) m.unlock();
-      }
-    };
-#endif
     typedef std::mutex mutex;
-    typedef boost::recursive_mutex recursive_mutex;
-    typedef boost::barrier barrier;
+    typedef std::recursive_mutex recursive_mutex;
+
+    // C++17-compatible barrier implementation (std::barrier is C++20)
+    class barrier {
+      std::mutex mtx;
+      std::condition_variable cv;
+      unsigned int threshold;
+      unsigned int count;
+      unsigned int generation;
+    public:
+      explicit barrier(unsigned int count)
+        : threshold(count), count(count), generation(0) {}
+
+      bool wait() {
+        std::unique_lock<std::mutex> lock(mtx);
+        unsigned int gen = generation;
+        if (--count == 0) {
+          generation++;
+          count = threshold;
+          cv.notify_all();
+          return true;
+        }
+        cv.wait(lock, [this, gen] { return gen != generation; });
+        return false;
+      }
+    };
 
 #if defined(__i386) || defined(__x86_64) && !_CRAYC
     inline void do_pause() {_mm_pause();}
@@ -142,28 +143,28 @@ namespace amplusplus {namespace detail {
 template <typename T, typename = void> struct atomics_supported: std::false_type {};
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1
-template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 1>::type>: std::true_type {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 1>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2
-template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 2>::type>: std::true_type {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 2>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
-template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 4>::type>: std::true_type {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 4>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
-template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 8>::type>: std::true_type {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 8>::type>: std::true_type {};
 #endif
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-template <typename T> struct atomics_supported<T, typename std::enable_if_c<sizeof(T) == 16>::type>: std::true_type {};
+template <typename T> struct atomics_supported<T, typename std::enable_if_t<sizeof(T) == 16>::type>: std::true_type {};
 #endif
 
 template <typename T>
 class atomic {
-  BOOST_MPL_ASSERT((atomics_supported<T>));
+  static_assert(atomics_supported<T>::value, "Atomics not supported for this type size");
 
   volatile T value;
   public:
@@ -239,6 +240,65 @@ class atomic {
 
 namespace amplusplus {
   namespace detail {
+
+    // Replacement for boost::thread_specific_ptr using thread_local storage
+    // Provides per-thread, per-instance storage for class members
+    template <typename T>
+    class thread_local_ptr {
+      using storage_map = std::unordered_map<const thread_local_ptr*, std::unique_ptr<T>>;
+      static storage_map& get_storage() {
+        static thread_local storage_map storage;
+        return storage;
+      }
+
+    public:
+      using element_type = T;
+
+      explicit thread_local_ptr(void (*cleanup)(T*) = nullptr) noexcept
+        : cleanup_(cleanup) {}
+
+      ~thread_local_ptr() {
+        // Note: destructor only cleans up in the calling thread
+        // Other threads' data will be cleaned when those threads exit
+        get_storage().erase(this);
+      }
+
+      thread_local_ptr(const thread_local_ptr&) = delete;
+      thread_local_ptr& operator=(const thread_local_ptr&) = delete;
+
+      T* get() const {
+        auto& storage = get_storage();
+        auto it = storage.find(this);
+        return it != storage.end() ? it->second.get() : nullptr;
+      }
+
+      T* operator->() const { return get(); }
+      T& operator*() const { return *get(); }
+
+      void reset(T* p = nullptr) {
+        auto& storage = get_storage();
+        if (p) {
+          storage[this] = std::unique_ptr<T>(p);
+        } else {
+          storage.erase(this);
+        }
+      }
+
+      T* release() {
+        auto& storage = get_storage();
+        auto it = storage.find(this);
+        if (it != storage.end()) {
+          T* p = it->second.release();
+          storage.erase(it);
+          return p;
+        }
+        return nullptr;
+      }
+
+    private:
+      void (*cleanup_)(T*);  // Not used but kept for API compatibility
+    };
+
     extern __thread int internal_thread_id;
 
     static inline int get_thread_id() {
@@ -257,7 +317,10 @@ namespace amplusplus {
       operator bool() const {return false;} // For use in if statements
     };
 
-    #define AMPLUSPLUS_WITH_THREAD_ID(id) if (::amplusplus::detail::push_thread_id_obj BOOST_PP_CAT(tidobj_, __LINE__) = (id)) {} else
+    // Helper macro for token concatenation
+    #define AMPLUSPLUS_PP_CAT_IMPL(a, b) a##b
+    #define AMPLUSPLUS_PP_CAT(a, b) AMPLUSPLUS_PP_CAT_IMPL(a, b)
+    #define AMPLUSPLUS_WITH_THREAD_ID(id) if (::amplusplus::detail::push_thread_id_obj AMPLUSPLUS_PP_CAT(tidobj_, __LINE__) = (id)) {} else
   }
 }
 

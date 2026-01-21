@@ -31,8 +31,6 @@
 #include <memory>
 #include <unordered_set>
 #include <type_traits>
-#include <boost/type_traits/function_traits.hpp>
-#include <boost/mpl/int.hpp>
 #include <vector>
 #include <iostream>
 #include <sstream>
@@ -152,8 +150,8 @@ public:
 private:
   valid_rank_set possible_dests;
   transport::rank_type num_possible_dests;
-  boost::scoped_array<amplusplus::detail::atomic<stored_type> > cache; // possible_dests->count() chunks of this->get_size() elements each
-  boost::scoped_array<amplusplus::detail::atomic<stored_type>*> start_ptrs; // Beginning of cache for rank or NULL
+  std::unique_ptr<amplusplus::detail::atomic<stored_type> > cache; // possible_dests->count() chunks of this->get_size() elements each
+  std::unique_ptr<amplusplus::detail::atomic<stored_type>*> start_ptrs; // Beginning of cache for rank or NULL
 
   public:
   template <typename CoalescingLayerGen>
@@ -270,8 +268,8 @@ private:
   transport::rank_type num_possible_dests;
   transport::rank_type num_ranks;
   int num_threads;
-  boost::scoped_array<stored_type> cache; // possible_dests->count() chunks of this->get_size() elements each
-  boost::scoped_array<stored_type*> start_ptrs; // Beginning of cache for rank or NULL
+  std::unique_ptr<stored_type> cache; // possible_dests->count() chunks of this->get_size() elements each
+  std::unique_ptr<stored_type*> start_ptrs; // Beginning of cache for rank or NULL
 
   public:
   template <typename CoalescingLayerGen>
@@ -397,7 +395,7 @@ public:
 private:
   typedef std::unordered_set<stored_type, policy_hasher> uo_set_type;
   std::vector<uo_set_type> cache; // One set for each destination, vector rather than scoped_array because our hasher is not default constructible
-  boost::scoped_array<std::mutex> lock; // One for each destination
+  std::unique_ptr<std::mutex> lock; // One for each destination
 
   public:
   explicit unordered_set_remove_duplicates(
@@ -466,31 +464,16 @@ bool is_identity(const no_identity_t&, const GetValue&, const Arg&) {return fals
 struct pair_first {
   template <typename P>
   typename P::first_type operator()(const P& p) const {return p.first;}
-
-  template <typename F>
-  struct result {
-    typedef typename boost::function_traits<F>::arg1_type::first_type type;
-  };
 };
 
 struct pair_second {
   template <typename P>
   typename P::second_type operator()(const P& p) const {return p.second;}
-
-  template <typename F>
-  struct result {
-    typedef typename boost::function_traits<F>::arg1_type::second_type type;
-  };
 };
 
 struct make_pair_t {
   template <typename A, typename B>
   std::pair<A, B> operator()(const A& a, const B& b) const {return std::make_pair(a, b);}
-
-  template <typename F>
-  struct result {
-    typedef std::pair<typename boost::function_traits<F>::arg1_type, typename boost::function_traits<F>::arg2_type> type;
-  };
 };
 
 template <typename T, typename = void> struct dummy_value;
@@ -523,7 +506,7 @@ class simple_cache_binop_reduction {
   MakeKeyval make_keyval;
   std::hash<key_type> hash_key;
   unsigned int lg_size;
-  boost::scoped_array<amplusplus::detail::atomic<arg_type> > values;
+  std::unique_ptr<amplusplus::detail::atomic<arg_type> > values;
 
   public:
   detail::hit_rate_counter counters;
@@ -567,7 +550,7 @@ class simple_cache_binop_reduction {
   }
 
   void send(const arg_type& a, rank_type dest) {
-    BOOST_STATIC_ASSERT (boost::is_void<arg_type>::value && !"Fix me up for new flush framework");
+    static_assert(std::is_void<arg_type>::value, "Fix me up for new flush framework");
     key_type a_key = get_key(a);
     value_type a_value = get_value(a);
 #ifdef AMPLUSPLUS_PRINT_HIT_RATES
@@ -672,9 +655,9 @@ class locking_cache_binop_reduction {
   MakeKeyval make_keyval;
   std::hash<key_type> hash_key;
   unsigned int lg_size;
-  // boost::scoped_array<amplusplus::detail::atomic<int /* bool */> > spinlocks; // atomic<bool> broken on BG/P
-  // boost::scoped_array<arg_type> values;
-  boost::scoped_array<std::pair<amplusplus::detail::atomic<int>, arg_type> > locks_and_values;
+  // std::unique_ptr<amplusplus::detail::atomic<int /* bool */> > spinlocks; // atomic<bool> broken on BG/P
+  // std::unique_ptr<arg_type> values;
+  std::unique_ptr<std::pair<amplusplus::detail::atomic<int>, arg_type> > locks_and_values;
   amplusplus::detail::atomic<int> any_filled_entries;
 
   public:
@@ -873,8 +856,8 @@ class per_thread_cache_binop_reduction {
   rank_type num_possible_dests;
   unsigned int num_threads;
   rank_type num_ranks;
-  boost::scoped_array<arg_type> values;
-  boost::scoped_array<arg_type*> start_ptrs;
+  std::unique_ptr<arg_type> values;
+  std::unique_ptr<arg_type*> start_ptrs;
 
   public:
   detail::hit_rate_counter counters;
@@ -942,7 +925,7 @@ class per_thread_cache_binop_reduction {
   }
 
   void send_with_tid(const arg_type& a, rank_type dest, int thread_id) {
-    BOOST_STATIC_ASSERT (boost::is_void<arg_type>::value && !"Fix me up for new flush framework");
+    static_assert(std::is_void<arg_type>::value, "Fix me up for new flush framework");
     key_type a_key = get_key(a);
     value_type a_value = get_value(a);
     counters.test(thread_id);
@@ -1043,8 +1026,8 @@ class per_thread_wt_cache_binop_reduction {
   rank_type num_possible_dests;
   unsigned int num_threads;
   rank_type num_ranks;
-  boost::scoped_array<arg_type> values;
-  boost::scoped_array<arg_type*> start_ptrs;
+  std::unique_ptr<arg_type> values;
+  std::unique_ptr<arg_type*> start_ptrs;
 
   public:
   detail::hit_rate_counter counters;

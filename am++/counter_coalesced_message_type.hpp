@@ -31,7 +31,6 @@
 #include <utility>
 #include <vector>
 #include <memory>
-#include <boost/thread.hpp>
 #include <am++/detail/typed_in_place_factory_owning.hpp>
 #include <am++/performance_counters.hpp>
 #include <stdint.h>
@@ -267,7 +266,6 @@ struct counter_coalesced_message_type_gen {
     }
   }
 
-#ifndef BOOST_NO_DEFAULTED_FUNCTIONS
   counter_coalesced_message_type(counter_coalesced_message_type&& o)
     : trans(o.trans), mt(std::move(o.mt)), buf_cache(),
       handler(std::move(o.handler)), outgoing_buffers(std::move(o.outgoing_buffers)),
@@ -275,7 +273,6 @@ struct counter_coalesced_message_type_gen {
       coalescing_size(o.coalescing_size), buffer_sorter(o.get_buffer_sorter()) {
     buf_cache.swap(o.buf_cache);
   }
-#endif
 
   ~counter_coalesced_message_type() {
     // These must be done in this order
@@ -327,9 +324,7 @@ struct counter_coalesced_message_type_gen {
     handler = handler_;
   }
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
   void set_handler(handler_type&& handler_) {handler = std::move(handler_);}
-#endif
 
   handler_type& get_handler() {
     return handler;
