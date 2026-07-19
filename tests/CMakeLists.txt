@@ -35,6 +35,7 @@ add_mpi_test(test_matvec test_matvec.cpp)
 add_mpi_test(test_pingpong test_pingpong.cpp 2)
 add_mpi_test(test_ring test_ring.cpp)
 add_mpi_test(test_message_priority test_message_priority.cpp)
+add_mpi_test(test_triangle_count test_triangle_count.cpp)
 
 # These tests have pre-existing template issues that need fixing:
 # - test_bfs_threaded.cpp: counter_coalesced_message_type_gen needs template args
