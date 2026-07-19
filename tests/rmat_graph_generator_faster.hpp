@@ -1,13 +1,13 @@
 // Copyright 2004, 2005 The Trustees of Indiana University.
 
 // Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met: 
+// modification, are permitted provided that the following conditions are met:
 
 // 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer. 
+//    list of conditions and the following disclaimer.
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution. 
+//    and/or other materials provided with the distribution.
 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -25,23 +25,17 @@
 #ifndef BOOST_GRAPH_RMAT_GENERATOR_FASTER_HPP
 #define BOOST_GRAPH_RMAT_GENERATOR_FASTER_HPP
 
-#include <math.h>
+#include <cmath>
 #include <iterator>
 #include <utility>
 #include <vector>
 #include <queue>
 #include <map>
 #include <cassert>
-#include <boost/shared_ptr.hpp>
-#include <boost/random/uniform_int.hpp>
-#include <boost/random/uniform_01.hpp>
+#include <memory>
+#include <random>
+#include <type_traits>
 #include <boost/graph/graph_traits.hpp>
-#include <boost/type_traits/is_base_and_derived.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/test/floating_point_comparison.hpp>
-
-using boost::shared_ptr;
-using boost::uniform_01;
 
 // Returns floor(log_2(n)), and -1 when n is 0
 template <typename IntegerType>
@@ -76,23 +70,31 @@ template <typename RandomGenerator, typename T>
 void
 generate_permutation_vector(RandomGenerator& gen, std::vector<T>& vertexPermutation, T n)
 {
-  using boost::uniform_int;
-
   vertexPermutation.resize(n);
 
   // Generate permutation map of vertex numbers
-  uniform_int<T> rand_vertex(0, n-1);
+  std::uniform_int_distribution<T> rand_vertex(0, n-1);
   for (T i = 0; i < n; ++i)
     vertexPermutation[i] = i;
 
-  // Can't use std::random_shuffle unless we create another (synchronized) PRNG
+  // Can't use std::shuffle unless we create another (synchronized) PRNG
   for (T i = 0; i < n; ++i)
     std::swap(vertexPermutation[i], vertexPermutation[rand_vertex(gen)]);
 }
 
+// Wrapper to make any generator produce uniform [0,1) doubles
+template <typename RandomGenerator>
+class uniform_01_generator {
+  RandomGenerator& gen;
+  std::uniform_real_distribution<double> dist;
+public:
+  explicit uniform_01_generator(RandomGenerator& g) : gen(g), dist(0.0, 1.0) {}
+  double operator()() { return dist(gen); }
+};
+
 template <typename RandomGenerator, typename T>
 std::pair<T,T>
-generate_edge_faster(shared_ptr<uniform_01<RandomGenerator> > prob, T n,
+generate_edge_faster(std::shared_ptr<uniform_01_generator<RandomGenerator>> prob, T n,
                      unsigned int SCALE, double a, double b, double c, double /*d*/)
 {
   T u = 0, v = 0;
@@ -156,9 +158,7 @@ namespace boost {
         SCALE(int_log2(n))
 
     {
-      this->gen.reset(new uniform_01<RandomGenerator>(gen));
-
-      // BOOST_ASSERT(boost::test_tools::check_is_close(a + b + c + d, 1., boost::test_tools::fraction_tolerance(1.e-5)));
+      this->gen = std::make_shared<uniform_01_generator<RandomGenerator>>(gen);
 
       if (permute_vertices)
         generate_permutation_vector(gen, vertexPermutation, n);
@@ -167,7 +167,7 @@ namespace boost {
 
       // Generate the first edge
       vertices_size_type u, v;
-      tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
+      std::tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
 
       if (permute_vertices)
         current = std::make_pair(vertexPermutation[u],
@@ -184,7 +184,7 @@ namespace boost {
     rmat_iterator_faster& operator++()
     {
       vertices_size_type u, v;
-      tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
+      std::tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
 
       if (permute_vertices)
         current = std::make_pair(vertexPermutation[u],
@@ -215,7 +215,7 @@ namespace boost {
   private:
 
     // Parameters
-    shared_ptr<uniform_01<RandomGenerator> > gen;
+    std::shared_ptr<uniform_01_generator<RandomGenerator>> gen;
     vertices_size_type n;
     double a, b, c, d;
     int edge;
@@ -268,9 +268,7 @@ namespace boost {
         values(sort_pair<vertices_size_type>()), done(false)
 
     {
-      // BOOST_ASSERT(boost::test_tools::check_is_close(a + b + c + d, 1., boost::test_tools::fraction_tolerance(1.e-5)));
-
-      this->gen.reset(new uniform_01<RandomGenerator>(gen));
+      this->gen = std::make_shared<uniform_01_generator<RandomGenerator>>(gen);
 
       std::vector<vertices_size_type> vertexPermutation;
       if (permute_vertices)
@@ -282,7 +280,7 @@ namespace boost {
       for (edges_size_type i = 0; i < m; ++i) {
 
         vertices_size_type u, v;
-        tie(u, v) = generate_edge(this->gen, n, SCALE, a, b, c, d);
+        std::tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
 
         if (permute_vertices) {
           if (ep(vertexPermutation[u], vertexPermutation[v]))
@@ -330,7 +328,7 @@ namespace boost {
   private:
 
     // Parameters
-    shared_ptr<uniform_01<RandomGenerator> > gen;
+    std::shared_ptr<uniform_01_generator<RandomGenerator>> gen;
     bool permute_vertices;
 
     // Internal data structures
@@ -369,9 +367,7 @@ namespace boost {
       : gen(), done(false)
 
     {
-      // BOOST_ASSERT(boost::test_tools::check_is_close(a + b + c + d, 1., boost::test_tools::fraction_tolerance(1.e-5)));
-
-      this->gen.reset(new uniform_01<RandomGenerator>(gen));
+      this->gen = std::make_shared<uniform_01_generator<RandomGenerator>>(gen);
 
       std::vector<vertices_size_type> vertexPermutation;
       if (permute_vertices)
@@ -384,11 +380,11 @@ namespace boost {
       edges_size_type edges = 0;
       do {
         vertices_size_type u, v;
-        tie(u, v) = generate_edge(this->gen, n, SCALE, a, b, c, d);
+        std::tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
 
         // Lowest vertex number always comes first
         // (this means we don't have to worry about i->j and j->i being in the edge list)
-        if (u > v && is_same<directed_category, undirected_tag>::value)
+        if (u > v && std::is_same<directed_category, undirected_tag>::value)
           std::swap(u, v);
 
         if (edge_map.find(std::make_pair(u, v)) == edge_map.end()) {
@@ -444,7 +440,7 @@ namespace boost {
   private:
 
     // Parameters
-    shared_ptr<uniform_01<RandomGenerator> > gen;
+    std::shared_ptr<uniform_01_generator<RandomGenerator>> gen;
 
     // Internal data structures
     std::vector<value_type> values;
@@ -482,9 +478,7 @@ namespace boost {
         values(sort_pair<vertices_size_type>()), done(false)
 
     {
-      // BOOST_ASSERT(boost::test_tools::check_is_close(a + b + c + d, 1., boost::test_tools::fraction_tolerance(1.e-5)));
-
-      this->gen.reset(new uniform_01<RandomGenerator>(gen));
+      this->gen = std::make_shared<uniform_01_generator<RandomGenerator>>(gen);
 
       std::vector<vertices_size_type> vertexPermutation;
       if (permute_vertices)
@@ -498,7 +492,7 @@ namespace boost {
       do {
 
         vertices_size_type u, v;
-        tie(u, v) = generate_edge(this->gen, n, SCALE, a, b, c, d);
+        std::tie(u, v) = generate_edge_faster(this->gen, n, SCALE, a, b, c, d);
 
         if (bidirectional) {
           if (edge_map.find(std::make_pair(u, v)) == edge_map.end()) {
@@ -520,7 +514,7 @@ namespace boost {
         } else {
           // Lowest vertex number always comes first
           // (this means we don't have to worry about i->j and j->i being in the edge list)
-          if (u > v && is_same<directed_category, undirected_tag>::value)
+          if (u > v && std::is_same<directed_category, undirected_tag>::value)
             std::swap(u, v);
 
           if (edge_map.find(std::make_pair(u, v)) == edge_map.end()) {
@@ -578,7 +572,7 @@ namespace boost {
   private:
 
     // Parameters
-    shared_ptr<uniform_01<RandomGenerator> > gen;
+    std::shared_ptr<uniform_01_generator<RandomGenerator>> gen;
     bool             bidirectional;
 
     // Internal data structures
