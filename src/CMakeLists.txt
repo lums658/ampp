@@ -31,8 +31,19 @@ target_link_libraries(ampp
         Boost::thread
 )
 
-# Compile definitions are handled via the generated config.h header
-# No additional definitions needed here
+# Threading and config compile definitions - PUBLIC so downstream consumers
+# compile headers with the same settings the library was built with
+if(AMPLUSPLUS_SINGLE_THREADED)
+    target_compile_definitions(ampp PUBLIC AMPLUSPLUS_SINGLE_THREADED)
+elseif(AMPLUSPLUS_USE_THREAD_SERIALIZED)
+    target_compile_definitions(ampp PUBLIC AMPLUSPLUS_USE_THREAD_SERIALIZED)
+elseif(AMPLUSPLUS_USE_THREAD_MULTIPLE)
+    target_compile_definitions(ampp PUBLIC AMPLUSPLUS_USE_THREAD_MULTIPLE)
+endif()
+
+if(DISABLE_SELF_SEND_CHECK)
+    target_compile_definitions(ampp PUBLIC DISABLE_SELF_SEND_CHECK)
+endif()
 
 # Set library version
 set_target_properties(ampp PROPERTIES

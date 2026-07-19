@@ -24,7 +24,7 @@
 #          Andrew Lumsdaine
 #          Marcin Zalewski
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16...3.31)
 
 project(ampp
     VERSION 0.999
@@ -47,6 +47,10 @@ option(AMPP_ENABLE_SELFCHECK "Enable self-checking (disable self-send check)" OF
 option(AMPP_ENABLE_DEBUGGING "Enable debugging (disables NDEBUG)" OFF)
 option(BUILD_TESTING "Build test programs" ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+# Install directories (must be before add_subdirectory so targets can use them)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Find required dependencies
 find_package(MPI REQUIRED)
@@ -97,20 +101,11 @@ if(BUILD_TESTING)
 endif()
 
 # Installation
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
 # Install headers
 install(
     DIRECTORY am++/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/am++
     FILES_MATCHING PATTERN "*.hpp"
-)
-
-# Install config header
-install(
-    FILES "${CMAKE_CURRENT_BINARY_DIR}/config.h"
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Generate and install package config files

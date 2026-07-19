@@ -13,13 +13,10 @@
 #define PACKAGE_URL "@PROJECT_HOMEPAGE_URL@"
 #define VERSION "@PROJECT_VERSION@"
 
-/* Threading configuration - set by CMake based on AMPP_THREADING_MODEL */
-#cmakedefine AMPLUSPLUS_SINGLE_THREADED
-#cmakedefine AMPLUSPLUS_USE_THREAD_SERIALIZED
-#cmakedefine AMPLUSPLUS_USE_THREAD_MULTIPLE
-
-/* Self-check configuration */
-#cmakedefine DISABLE_SELF_SEND_CHECK
+/* Threading configuration is now set via PUBLIC compile definitions on the
+   ampp CMake target (AMPLUSPLUS_SINGLE_THREADED, AMPLUSPLUS_USE_THREAD_SERIALIZED,
+   AMPLUSPLUS_USE_THREAD_MULTIPLE) so that downstream consumers automatically
+   get the same flags.  Same for DISABLE_SELF_SEND_CHECK. */
 
 /* Debug configuration */
 #cmakedefine AMPP_ENABLE_DEBUGGING

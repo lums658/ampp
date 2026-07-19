@@ -2,6 +2,9 @@
 
 include(CMakeFindDependencyMacro)
 
+# Set policies for this config file scope (silences CMP0167 FindBoost warning)
+cmake_policy(VERSION 3.16...3.31)
+
 find_dependency(MPI REQUIRED)
 find_dependency(Threads REQUIRED)
 find_dependency(Boost 1.52 REQUIRED COMPONENTS system thread)
