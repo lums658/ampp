@@ -68,3 +68,9 @@ Testing/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Machine-local Claude Code settings
+.claude/settings.local.json
+
+# Local reference papers
+*.pdf
