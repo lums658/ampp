@@ -171,12 +171,12 @@ struct pingpong_handler_non_coalesced_sized {
     auto msg_copy = this->msg; // Copy to local for lambda capture
     if (source != 0) { // rank 0
       if (data + 1 != reps) {
-        *msg_copy = data + 1;
+        msg_copy[0] = data + 1;
         tm.message_being_built(1);
         tm.send(msg_copy.get(), size, 1, [msg_copy]() {});
       }
     } else { // rank 1
-      *msg_copy = data;
+      msg_copy[0] = data;
       tm.message_being_built(0);
       tm.send(msg_copy.get(), size, 0, [msg_copy]() {});
     }
@@ -303,7 +303,7 @@ void do_one_thread(amplusplus::environment& env) {
         timer t("AM++ no coalescing (size = " + std::to_string(size * sizeof(int)) + ")", actual_reps * 2, size * sizeof(int), (trans.rank() == 0));
         if (trans.rank() == 0) {
           // boost::shared_ptr<int> msg = boost::make_shared<int>(0);
-          *msg = 0;
+          msg[0] = 0;
           tm.message_being_built(1);
           tm.send(msg.get(), size, 1, [msg]() {});
         }
