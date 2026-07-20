@@ -58,7 +58,7 @@ find_package(Threads REQUIRED)
 
 # Find Boost - for now we still need some Boost libraries
 # (Graph, Intrusive, Pool have no std replacements)
-find_package(Boost 1.52 REQUIRED COMPONENTS system thread)
+find_package(Boost 1.52 REQUIRED COMPONENTS thread)
 
 # Set threading configuration variables for config.h generation
 if(NOT AMPP_ENABLE_THREADING OR AMPP_THREADING_MODEL STREQUAL "none")

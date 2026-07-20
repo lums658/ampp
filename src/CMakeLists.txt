@@ -27,7 +27,6 @@ target_link_libraries(ampp
     PUBLIC
         MPI::MPI_CXX
         Threads::Threads
-        Boost::system
         Boost::thread
 )
 
