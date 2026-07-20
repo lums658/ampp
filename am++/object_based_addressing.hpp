@@ -31,6 +31,7 @@
 #include <am++/detail/factory_wrapper.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <bit>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <cassert>
@@ -435,7 +436,7 @@ struct rook_routing {
   rook_routing(transport::rank_type my_rank, transport::rank_type sz)
     : my_rank(transport::rank_type(my_rank)), sz(sz)
   {
-    transport::rank_type factor = int(sqrt(double(sz)));
+    transport::rank_type factor = int(std::sqrt(double(sz)));
     while (sz % factor != 0) --factor; // Must finish at least by when factor == 1
     side1 = factor;
     side2 = sz / factor;

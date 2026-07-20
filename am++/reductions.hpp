@@ -150,8 +150,8 @@ public:
 private:
   valid_rank_set possible_dests;
   transport::rank_type num_possible_dests;
-  std::unique_ptr<amplusplus::detail::atomic<stored_type> > cache; // possible_dests->count() chunks of this->get_size() elements each
-  std::unique_ptr<amplusplus::detail::atomic<stored_type>*> start_ptrs; // Beginning of cache for rank or NULL
+  std::unique_ptr<amplusplus::detail::atomic<stored_type>[]> cache; // possible_dests->count() chunks of this->get_size() elements each
+  std::unique_ptr<amplusplus::detail::atomic<stored_type>*[]> start_ptrs; // Beginning of cache for rank or NULL
 
   public:
   template <typename CoalescingLayerGen>
@@ -264,8 +264,8 @@ private:
   transport::rank_type num_possible_dests;
   transport::rank_type num_ranks;
   int num_threads;
-  std::unique_ptr<stored_type> cache; // possible_dests->count() chunks of this->get_size() elements each
-  std::unique_ptr<stored_type*> start_ptrs; // Beginning of cache for rank or NULL
+  std::unique_ptr<stored_type[]> cache; // possible_dests->count() chunks of this->get_size() elements each
+  std::unique_ptr<stored_type*[]> start_ptrs; // Beginning of cache for rank or NULL
 
   public:
   template <typename CoalescingLayerGen>
@@ -389,7 +389,7 @@ public:
 private:
   typedef std::unordered_set<stored_type, policy_hasher> uo_set_type;
   std::vector<uo_set_type> cache; // One set for each destination, vector rather than scoped_array because our hasher is not default constructible
-  std::unique_ptr<std::mutex> lock; // One for each destination
+  std::unique_ptr<std::mutex[]> lock; // One for each destination
 
   public:
   explicit unordered_set_remove_duplicates(
@@ -500,7 +500,7 @@ class simple_cache_binop_reduction {
   MakeKeyval make_keyval;
   std::hash<key_type> hash_key;
   unsigned int lg_size;
-  std::unique_ptr<amplusplus::detail::atomic<arg_type> > values;
+  std::unique_ptr<amplusplus::detail::atomic<arg_type>[]> values;
 
   public:
   detail::hit_rate_counter counters;
@@ -650,8 +650,8 @@ class locking_cache_binop_reduction {
   std::hash<key_type> hash_key;
   unsigned int lg_size;
   // std::unique_ptr<amplusplus::detail::atomic<int /* bool */> > spinlocks; // atomic<bool> broken on BG/P
-  // std::unique_ptr<arg_type> values;
-  std::unique_ptr<std::pair<amplusplus::detail::atomic<int>, arg_type> > locks_and_values;
+  // std::unique_ptr<arg_type[]> values;
+  std::unique_ptr<std::pair<amplusplus::detail::atomic<int>, arg_type>[]> locks_and_values;
   amplusplus::detail::atomic<int> any_filled_entries;
 
   public:
@@ -850,8 +850,8 @@ class per_thread_cache_binop_reduction {
   rank_type num_possible_dests;
   unsigned int num_threads;
   rank_type num_ranks;
-  std::unique_ptr<arg_type> values;
-  std::unique_ptr<arg_type*> start_ptrs;
+  std::unique_ptr<arg_type[]> values;
+  std::unique_ptr<arg_type*[]> start_ptrs;
 
   public:
   detail::hit_rate_counter counters;
@@ -1020,8 +1020,8 @@ class per_thread_wt_cache_binop_reduction {
   rank_type num_possible_dests;
   unsigned int num_threads;
   rank_type num_ranks;
-  std::unique_ptr<arg_type> values;
-  std::unique_ptr<arg_type*> start_ptrs;
+  std::unique_ptr<arg_type[]> values;
+  std::unique_ptr<arg_type*[]> start_ptrs;
 
   public:
   detail::hit_rate_counter counters;
